@@ -1,0 +1,22 @@
+#!/bin/bash
+
+# Code to run Stampy to assemble genomes
+# Stampy ReadMe: https://www.rdm.ox.ac.uk/files/research/lunter-group/stampyreadme.txt
+
+# Add Stampy to path:
+export PATH=/programs/stampy:$PATH
+
+# Switch to the older version of Python:
+module load python/2.7.15
+
+# First you have to build a genome file:
+/programs/stampy/stampy.py -G cVarians ./CVAR/CVAR_genome_v1.0.fasta
+
+# After building the genome file, you need to build a hash table:
+/programs/stampy/stampy.py -g cVarians -H cVarians
+
+# Finally, you're ready to map some reads:
+/programs/stampy/stampy.py -g cVarians -h cVarians -M ./usftp21.novogene.com/01.RawData/CSM3441/CSM3441_CKDN220039204-1A_H37N7DSX5_L1_1.fq.gz,./usftp21.novogene.com/01.RawData/CSM3441/CSM3441_CKDN220039204-1A_H37N7DSX5_L1_2.fq.gz -o CSM3441.sam
+
+# Can also try using NextGenMap:
+/programs/NextGenMap-0.4.11/bin/ngm-0.4.11/ngm  -t 14 -p -r ./CVAR/CVAR_genome_v1.0.fasta -1 ./usftp21.novogene.com/01.RawData/CSM3441/CSM3441_CKDN220039204-1A_H37N7DSX5_L1_1.fq.gz -2 ./usftp21.novogene.com/01.RawData/CSM3441/CSM3441_CKDN220039204-1A_H37N7DSX5_L1_2.fq.gz -o ngm_CSM3441.sam 
