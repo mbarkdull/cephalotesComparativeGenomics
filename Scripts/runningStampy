@@ -1,22 +1,42 @@
 #!/bin/bash
 
-# Code to run Stampy to assemble genomes
-# Stampy ReadMe: https://www.rdm.ox.ac.uk/files/research/lunter-group/stampyreadme.txt
+# Using Stampy:
+  # Code to run Stampy to assemble genomes
+  # Stampy ReadMe: https://www.rdm.ox.ac.uk/files/research/lunter-group/stampyreadme.txt
 
-# Add Stampy to path:
-export PATH=/programs/stampy:$PATH
+  # Add Stampy to path:
+  export PATH=/programs/stampy:$PATH
 
-# Switch to the older version of Python:
-module load python/2.7.15
+  # Switch to the older version of Python:
+  module load python/2.7.15
 
-# First you have to build a genome file:
-/programs/stampy/stampy.py -G cVarians ./CVAR/CVAR_genome_v1.0.fasta
+  # First you have to build a genome file:
+  /programs/stampy/stampy.py -G cVarians ./CVAR/CVAR_genome_v1.0.fasta
 
-# After building the genome file, you need to build a hash table:
-/programs/stampy/stampy.py -g cVarians -H cVarians
+  # After building the genome file, you need to build a hash table:
+  /programs/stampy/stampy.py -g cVarians -H cVarians
 
-# Finally, you're ready to map some reads:
-/programs/stampy/stampy.py -g cVarians -h cVarians -M ./usftp21.novogene.com/01.RawData/CSM3441/CSM3441_CKDN220039204-1A_H37N7DSX5_L1_1.fq.gz,./usftp21.novogene.com/01.RawData/CSM3441/CSM3441_CKDN220039204-1A_H37N7DSX5_L1_2.fq.gz -o CSM3441.sam
+  # Finally, you're ready to map some reads:
+  /programs/stampy/stampy.py -g cVarians -h cVarians -M ./usftp21.novogene.com/01.RawData/CSM3441/CSM3441_CKDN220039204-1A_H37N7DSX5_L1_1.fq.gz,./usftp21.novogene.com/01.RawData/CSM3441/CSM3441_CKDN220039204-1A_H37N7DSX5_L1_2.fq.gz -o CSM3441.sam
 
 # Can also try using NextGenMap:
-/programs/NextGenMap-0.4.11/bin/ngm-0.4.11/ngm  -t 14 -p -r ./CVAR/CVAR_genome_v1.0.fasta -1 ./usftp21.novogene.com/01.RawData/CSM3441/CSM3441_CKDN220039204-1A_H37N7DSX5_L1_1.fq.gz -2 ./usftp21.novogene.com/01.RawData/CSM3441/CSM3441_CKDN220039204-1A_H37N7DSX5_L1_2.fq.gz -o ngm_CSM3441.sam 
+  /programs/NextGenMap-0.4.11/bin/ngm-0.4.11/ngm  -t 14 -p -r ./CVAR/CVAR_genome_v1.0.fasta -1 ./usftp21.novogene.com/01.RawData/CSM3441/CSM3441_CKDN220039204-1A_H37N7DSX5_L1_1.fq.gz -2 ./usftp21.novogene.com/01.RawData/CSM3441/CSM3441_CKDN220039204-1A_H37N7DSX5_L1_2.fq.gz -o ngm_CSM3441.sam
+
+# Convert .sam files to .bam files
+/programs/samtools-1.9/bin/samtools  view -bS -@ 10 ngm_CSM3441.sam > ngm_CSM3441.bam
+
+# Get summary statistics:
+samtools flagstat ngm_CSM3441.bam > QC_ngm_CSM3441.txt
+
+# Sort and index the reads:
+/programs/samtools-1.9/bin/samtools sort ngm_CSM3441.bam -o sorted_ngm_CSM3441.bam
+/programs/samtools-1.9/bin/samtools index sorted_ngm_CSM3441.bam
+
+# Call variants with bcftools:
+/programs/bcftools-1.9/bin/bcftools mpileup -Ou -f ./CVAR/CVAR_genome_v1.0.fasta sorted_ngm_CSM3441.bam | bcftools call -mv -Ob -o calls.bcf
+
+# Call variants with platypus:
+export LD_LIBRARY_PATH=/programs/htslib-1.9/lib
+export PATH=/programs/Platypus_0.8.1_2:$PATH
+
+/programs/Platypus_0.8.1_2/bin/Platypus.py callVariants --bamFiles=sorted_ngm_CSM3441.bam --refFile=./CVAR/CVAR_genome_v1.0.fasta --output=platypusVariantCalls.vcf
