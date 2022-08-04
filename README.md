@@ -1,2 +1,5 @@
-# cephalotesComparativeGenomics
-code for Chapter 2, Cephalotes comparative genomics
+Reference-guided genome assembly and comparative genomics workflow
+================
+Megan Barkdull
+
+## Introduction

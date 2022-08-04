@@ -1,0 +1,14 @@
+---
+title: "Reference-guided genome assembly and comparative genomics workflow"
+author: "Megan Barkdull"
+output: 
+  github_document:
+    toc: true
+    toc_depth: 5
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
