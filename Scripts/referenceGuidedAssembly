@@ -1,0 +1,46 @@
+#!/bin/bash
+
+# I'll have a list of the sample names, from which input and output file names can be derived. This script will run through each sample and assemble it to the C. varians reference genome.
+# $1 should be the list of sample names
+# $2 is the number of threads to use for each step
+
+while read -r line;
+do
+  # Trim the raw sequence reads:
+  mkdir ./trimmedSequences/
+  export forwardRawFile=./usftp21.novogene.com/01.RawData/$line/*_1.fq.gz
+  export reverseRawFile=./usftp21.novogene.com/01.RawData/$line/*_2.fq.gz
+  echo Running on $forwardRawFile and $reverseRawFile
+  echo _______________________
+  export outputForwardPaired=./trimmedSequences/trimmedForwardPaired$line.fq.gz
+  export outputForwardUnpaired=./trimmedSequences/trimmedForwardUnpaired$line.fq.gz
+  export outputReversePaired=./trimmedSequences/trimmedReversePaired$line.fq.gz
+  export outputReverseUnpaired=./trimmedSequences/trimmedReverseUnpaired$line.fq.gz
+
+  java -jar /programs/trimmomatic/trimmomatic-0.39.jar PE -threads $2 -trimlog $line_"trimmomaticLogFile.txt" $forwardRawFile $reverseRawFile $outputForwardPaired $outputForwardUnpaired $outputReversePaired $outputReverseUnpaired ILLUMINACLIP:novogeneAdaptors.fa:2:30:10:2:True LEADING:3 TRAILING:3 MINLEN:35
+
+  # Map the trimmed reads back to the C. varians genome with NextGenMap
+  mkdir ./nextGenMapOutputs/
+  export nextGenMapOutputSam=mapped$line.sam
+  export nextGenMapOutputBam=mapped$line.bam
+
+  /programs/NextGenMap-0.4.11/bin/ngm-0.4.11/ngm  -t $2 -p -r ./CVAR/CVAR_genome_v1.0.fasta -1 $outputForwardPaired -2 $outputReversePaired -o ./nextGenMapOutputs/$nextGenMapOutputSam
+
+  # Convert .sam files to .bam files
+  /programs/samtools-1.9/bin/samtools  view -bS -@ 10 ./nextGenMapOutputs/$nextGenMapOutputSam > ./nextGenMapOutputs/$nextGenMapOutputBam
+
+  # Get summary statistics:
+  export summaryStats=./nextGenMapOutputs/$line"summaryStats.txt"
+  samtools flagstat ./nextGenMapOutputs/$nextGenMapOutputBam > $summaryStats
+
+  # Sort and index the reads:
+  export sortedBam=sorted$nextGenMapOutputBam
+  /programs/samtools-1.9/bin/samtools sort ./nextGenMapOutputs/$nextGenMapOutputBam -o ./nextGenMapOutputs/$sortedBam
+  /programs/samtools-1.9/bin/samtools index ./nextGenMapOutputs/$sortedBam
+
+  # Call variants with bcftools:
+  mkdir ./calledVariants/
+  export calledVariants=$line"CalledVariants.bcf"
+  /programs/bcftools-1.9/bin/bcftools mpileup -Ou -f ./CVAR/CVAR_genome_v1.0.fasta ./nextGenMapOutputs/$sortedBam | bcftools call -mv -Ob -o ./calledVariants/$calledVariants
+
+done < $1
