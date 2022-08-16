@@ -3,6 +3,10 @@
 # I'll have a list of the sample names, from which input and output file names can be derived. This script will run through each sample and assemble it to the C. varians reference genome.
 # $1 should be the list of sample names
 # $2 is the number of threads to use for each step
+while read -r line;
+do
+  echo $line
+done < $1
 
 while read -r line;
 do
@@ -18,14 +22,35 @@ do
   export outputReverseUnpaired=./trimmedSequences/trimmedReverseUnpaired$line.fq.gz
 
   java -jar /programs/trimmomatic/trimmomatic-0.39.jar PE -threads $2 -trimlog $line_"trimmomaticLogFile.txt" $forwardRawFile $reverseRawFile $outputForwardPaired $outputForwardUnpaired $outputReversePaired $outputReverseUnpaired ILLUMINACLIP:novogeneAdaptors.fa:2:30:10:2:True LEADING:3 TRAILING:3 MINLEN:35
+done < $1
 
-  # Map the trimmed reads back to the C. varians genome with NextGenMap
+inputs=$(cat $1)
+for line in $inputs
+do
   mkdir ./nextGenMapOutputs/
   export nextGenMapOutputSam=mapped$line.sam
   export nextGenMapOutputBam=mapped$line.bam
-
   /programs/NextGenMap-0.4.11/bin/ngm-0.4.11/ngm  -t $2 -p -r ./CVAR/CVAR_genome_v1.0.fasta -1 $outputForwardPaired -2 $outputReversePaired -o ./nextGenMapOutputs/$nextGenMapOutputSam
+  echo "_________________________________NEXTGENMAP IS DONE on" $line
+done
 
+#while read -r line;
+#do
+  #echo Starting nextgenmap on $line
+  # Map the trimmed reads back to the C. varians genome with NextGenMap
+  #mkdir ./nextGenMapOutputs/
+  #export nextGenMapOutputSam=mapped$line.sam
+  #export nextGenMapOutputBam=mapped$line.bam
+  #### RIGHT NOW THIS CAUSES THE SCRIPT TO QUIT OUT OF THE WHILE LOOP
+  #/programs/NextGenMap-0.4.11/bin/ngm-0.4.11/ngm  -t $2 -p -r ./CVAR/CVAR_genome_v1.0.fasta -1 $outputForwardPaired -2 $outputReversePaired -o ./nextGenMapOutputs/$nextGenMapOutputSam
+  #sleep 30
+  #echo NEXTGENMAP IS DONE on $line
+  #continue
+  #echo "I didn't go to the next iteration."
+#done < $1
+
+while read -r line;
+do
   # Convert .sam files to .bam files
   /programs/samtools-1.9/bin/samtools  view -bS -@ 10 ./nextGenMapOutputs/$nextGenMapOutputSam > ./nextGenMapOutputs/$nextGenMapOutputBam
 
@@ -43,4 +68,5 @@ do
   export calledVariants=$line"CalledVariants.bcf"
   /programs/bcftools-1.9/bin/bcftools mpileup -Ou -f ./CVAR/CVAR_genome_v1.0.fasta ./nextGenMapOutputs/$sortedBam | bcftools call -mv -Ob -o ./calledVariants/$calledVariants
 
+  echo __________________ Done with $line _________________
 done < $1
