@@ -3,6 +3,10 @@
 # I'll have a list of the sample names, from which input and output file names can be derived. This script will run through each sample and assemble it to the C. varians reference genome.
 # $1 should be the list of sample names
 # $2 is the number of threads to use for each step
+mkdir ./trimmedSequences/
+mkdir ./nextGenMapOutputs/
+mkdir ./calledVariants/
+
 while read -r line;
 do
   echo $line
@@ -11,7 +15,6 @@ done < $1
 while read -r line;
 do
   # Trim the raw sequence reads:
-  mkdir ./trimmedSequences/
   export forwardRawFile=./usftp21.novogene.com/01.RawData/$line/*_1.fq.gz
   export reverseRawFile=./usftp21.novogene.com/01.RawData/$line/*_2.fq.gz
   echo Running on $forwardRawFile and $reverseRawFile
@@ -25,9 +28,9 @@ do
 done < $1
 
 inputs=$(cat $1)
+echo $inputs
 for line in $inputs
 do
-  mkdir ./nextGenMapOutputs/
   export nextGenMapOutputSam=mapped$line.sam
   export nextGenMapOutputBam=mapped$line.bam
   /programs/NextGenMap-0.4.11/bin/ngm-0.4.11/ngm  -t $2 -p -r ./CVAR/CVAR_genome_v1.0.fasta -1 $outputForwardPaired -2 $outputReversePaired -o ./nextGenMapOutputs/$nextGenMapOutputSam
@@ -64,7 +67,6 @@ do
   /programs/samtools-1.9/bin/samtools index ./nextGenMapOutputs/$sortedBam
 
   # Call variants with bcftools:
-  mkdir ./calledVariants/
   export calledVariants=$line"CalledVariants.bcf"
   /programs/bcftools-1.9/bin/bcftools mpileup -Ou -f ./CVAR/CVAR_genome_v1.0.fasta ./nextGenMapOutputs/$sortedBam | bcftools call -mv -Ob -o ./calledVariants/$calledVariants
 
