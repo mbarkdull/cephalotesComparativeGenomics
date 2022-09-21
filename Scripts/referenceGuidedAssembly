@@ -6,6 +6,8 @@
 mkdir ./trimmedSequences/
 mkdir ./nextGenMapOutputs/
 mkdir ./calledVariants/
+touch assemblyLog.txt
+echo Beginning genome assembly at `date` >> assemblyLog.txt
 
 while read -r line;
 do
@@ -25,6 +27,8 @@ do
   export outputReverseUnpaired=./trimmedSequences/trimmedReverseUnpaired$line.fq.gz
 
   java -jar /programs/trimmomatic/trimmomatic-0.39.jar PE -threads $2 -trimlog $line_"trimmomaticLogFile.txt" $forwardRawFile $reverseRawFile $outputForwardPaired $outputForwardUnpaired $outputReversePaired $outputReverseUnpaired ILLUMINACLIP:novogeneAdaptors.fa:2:30:10:2:True LEADING:3 TRAILING:3 MINLEN:35
+  echo Finished trimming $line at `date` >> assemblyLog.txt
+
 done < $1
 
 inputs=$(cat $1)
@@ -35,6 +39,8 @@ do
   export nextGenMapOutputBam=mapped$line.bam
   /programs/NextGenMap-0.4.11/bin/ngm-0.4.11/ngm  -t $2 -p -r ./CVAR/CVAR_genome_v1.0.fasta -1 $outputForwardPaired -2 $outputReversePaired -o ./nextGenMapOutputs/$nextGenMapOutputSam
   echo "_________________________________NEXTGENMAP IS DONE on" $line
+  echo Finished NextGenMap on $line at `date` >> assemblyLog.txt
+
 done
 
 #while read -r line;
@@ -56,19 +62,26 @@ while read -r line;
 do
   # Convert .sam files to .bam files
   /programs/samtools-1.9/bin/samtools  view -bS -@ 10 ./nextGenMapOutputs/$nextGenMapOutputSam > ./nextGenMapOutputs/$nextGenMapOutputBam
+  echo Finished converting $line from .sam to .bam at `date` >> assemblyLog.txt
+
 
   # Get summary statistics:
   export summaryStats=./nextGenMapOutputs/$line"summaryStats.txt"
   samtools flagstat ./nextGenMapOutputs/$nextGenMapOutputBam > $summaryStats
+  echo Finished producing summary stats for $line at `date` >> assemblyLog.txt
 
   # Sort and index the reads:
   export sortedBam=sorted$nextGenMapOutputBam
   /programs/samtools-1.9/bin/samtools sort ./nextGenMapOutputs/$nextGenMapOutputBam -o ./nextGenMapOutputs/$sortedBam
   /programs/samtools-1.9/bin/samtools index ./nextGenMapOutputs/$sortedBam
+  echo Finished sorting and indexing $line at `date` >> assemblyLog.txt
 
   # Call variants with bcftools:
   export calledVariants=$line"CalledVariants.bcf"
   /programs/bcftools-1.9/bin/bcftools mpileup -Ou -f ./CVAR/CVAR_genome_v1.0.fasta ./nextGenMapOutputs/$sortedBam | bcftools call -mv -Ob -o ./calledVariants/$calledVariants
+  echo Finished calling variants in $line at `date` >> assemblyLog.txt
 
   echo __________________ Done with $line _________________
+  echo Finished genome assembly at `date` >> assemblyLog.txt
+
 done < $1
