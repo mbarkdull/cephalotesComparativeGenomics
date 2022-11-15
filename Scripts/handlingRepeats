@@ -1,8 +1,21 @@
-# make a directory for storing logs
-mkdir -p logs
-# build new RepeatModeler BLAST database with a name that includes an ID (e.g., a species code, specimen ID, etc.)
-# and genus/species. Modify accordingly.
-BuildDatabase -name ID_Genus-species -engine ncbi reference-genome.fasta
-# now run RepeatModeler with 16 cores and send results from STDOUT and STDERR streams to 1_repeatmodeler.log
-# in my experience, this command takes 1-3 days with vertebrate genomes
-RepeatModeler -pa 16 -engine ncbi -database ID_Genus-species 2>&1 | tee 00_repeatmodeler.log
+#!/bin/bash
+
+# Make a directory for storing logs
+mkdir ./handlingRepeats
+cd ./handlingRepeats
+mkdir -p ./runLogs
+
+# Iterate through the list of samples, identifying repeats in the assemblies (i.e. in the called variants files):
+# This requires that the sample name file be given as input on the command line:
+while read -r line;
+do
+  export calledVariants=$line"CalledVariants.bcf"
+  export variantFile="../calledVariants/"$calledVariants
+
+  # Build new RepeatModeler BLAST database with a name that includes an ID (e.g., a species code, specimen ID, etc.) and genus/species.
+  BuildDatabase -name $line -engine ncbi $variantFile
+
+  # now run RepeatModeler with 16 cores and send results from STDOUT and STDERR streams to 1_repeatmodeler.log
+  # in my experience, this command takes 1-3 days with vertebrate genomes
+  RepeatModeler -pa 16 -engine ncbi -database $line 2>&1 | tee 00_repeatmodeler.log
+done < $1
