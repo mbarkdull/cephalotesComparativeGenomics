@@ -30,7 +30,7 @@ Reference-guided genome assembly has the following steps:
   4. Filter the calls by quality. 
   5. Assemble a consensus sequence. 
   
-These steps are all implemented by the scripts `./Scripts/referenceGuidedAssembly`, which requires two arguments: first, a list of samples, and two, the number of threads to use for multithreaded steps. 
+These steps are all implemented by the scripts `./Scripts/referenceGuidedAssembly`, which requires two arguments: first, a list of samples, and two, the number of threads to use for multithreaded steps. In other words, run this script with the command `./Scripts/referenceGuidedAssembly [path to file listing samples] [number of threads to use when possible]`.
 
 Note that this script currently has a lot of hard-coded paths, including the paths to each program. The location and names of your raw sequencing files will also be different than those in this script, so update accordingly. 
 
@@ -40,3 +40,7 @@ If you use this script, please cite:
   + Fritz J. Sedlazeck, Philipp Rescheneder, Arndt von Haeseler, NextGenMap: fast and accurate read mapping in highly polymorphic genomes, Bioinformatics, Volume 29, Issue 21, 1 November 2013, Pages 2790–2791, https://doi.org/10.1093/bioinformatics/btt468
   + Twelve years of SAMtools and BCFtools. Petr Danecek, James K Bonfield, Jennifer Liddle, John Marshall, Valeriu Ohan, Martin O Pollard, Andrew Whitwham, Thomas Keane, Shane A McCarthy, Robert M Davies, Heng Li. GigaScience, Volume 10, Issue 2, February 2021, giab008, https://doi.org/10.1093/gigascience/giab008
   
+## Processing assembled genomes
+Once genomes are assembled, they require some processing before genes are identified. 
+
+Repetitive regions of the genome must be soft-masked prior to annotation. To do this, we must first predict/identify transposable element sequences in the genomes, which we will do with RepeatModeler2, implemented in the Bash script `./Scripts/handlingRepeats`. You can run this script with the command `./Scripts/handlingRepeats [path to file listing samples] [number of threads to use when possible]`

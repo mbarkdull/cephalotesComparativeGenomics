@@ -57,3 +57,13 @@ If you use this script, please cite:
     Pollard, Andrew Whitwham, Thomas Keane, Shane A McCarthy, Robert M
     Davies, Heng Li. GigaScience, Volume 10, Issue 2, February 2021,
     giab008, <https://doi.org/10.1093/gigascience/giab008>
+
+## Processing assembled genomes
+
+Once genomes are assembled, they require some processing before genes
+are identified.
+
+Repetitive regions of the genome must be soft-masked prior to
+annotation. To do this, we must first predict/identify transposable
+element sequences in the genomes, which we will do with RepeatModeler2,
+implemented in the Bash script `./Scripts/handlingRepeats`.
