@@ -6,6 +6,7 @@
 mkdir ./trimmedSequences/
 mkdir ./nextGenMapOutputs/
 mkdir ./calledVariants/
+mkdir ./consensusSequences/
 touch assemblyLog.txt
 echo Beginning genome assembly at `date` >> assemblyLog.txt
 
@@ -102,7 +103,7 @@ do
   fi
 
   # Call variants with bcftools:
-  export calledVariants=$line"CalledVariants.bcf"
+  export calledVariants=$line"CalledVariants.vcf.gz"
   export variantFile="./calledVariants/"$calledVariants
 
   if [ -s "$variantFile" ]; then
@@ -110,7 +111,19 @@ do
   else
     echo "$variantFile does not exist."
     /programs/bcftools-1.9-r9/bin/bcftools mpileup -Ou -f ./CVAR/CVAR_genome_v1.0.fasta ./nextGenMapOutputs/$sortedBam | bcftools call -mv -Ob -o ./calledVariants/$calledVariants
+    bcftools index ./calledVariants/$calledVariants
     echo Finished calling variants in $line at `date` >> assemblyLog.txt
+  fi
+
+  # Create a consensus sequence:
+  export consensus=./consensusSequences/$line"Consensus.fa"
+
+  if [ -s "$consensus" ]; then
+    echo "$consensus exists."
+  else
+    echo "$consensus does not exist."
+    cat ./CVAR/CVAR_genome_v1.0.fasta | bcftools consensus ./calledVariants/$calledVariants > $consensus
+    echo Finished creating consensus sequence for $line at `date` >> assemblyLog.txt
   fi
 
   echo __________________ Done with $line _________________
