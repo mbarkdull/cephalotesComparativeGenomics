@@ -1,21 +1,33 @@
 #!/bin/bash
 
+# Get the docker image and convert to Singularity, to run this on the BioHPC:
+singularity pull tetools.sif docker://dfam/tetools:latest
+
 # Make a directory for storing logs
 mkdir ./handlingRepeats
 cd ./handlingRepeats
 mkdir -p ./runLogs
 
-# Iterate through the list of samples, identifying repeats in the assemblies (i.e. in the called variants files):
+# Iterate through the list of samples, identifying repeats in the assemblies (i.e. in the consensus sequence files):
 # This requires that the sample name file be given as input on the command line:
 while read -r line;
 do
-  export calledVariants=$line"CalledVariants.bcf"
-  export variantFile="../calledVariants/"$calledVariants
+  export consensus=./consensusSequences/$line"Consensus.fa"
 
   # Build new RepeatModeler BLAST database with a name that includes an ID (e.g., a species code, specimen ID, etc.) and genus/species.
-  BuildDatabase -name $line -engine ncbi $variantFile
+  ./tetools.sif BuildDatabase -name $line -engine ncbi $consensus
 
   # now run RepeatModeler with 16 cores and send results from STDOUT and STDERR streams to 1_repeatmodeler.log
   # in my experience, this command takes 1-3 days with vertebrate genomes
-  RepeatModeler -pa 16 -engine ncbi -database $line 2>&1 | tee 00_repeatmodeler.log
+  RepeatModeler -pa 16 -engine ncbi -database $line 2>&1 | tee ./runLogs/00_repeatmodeler.log
+done < $1
+
+# Make directories for RepeatMasker outputs:
+mkdir -p  1simpleRepeatOutput 2taxonSpecificOutput 3knownOutput 4unknownOutput
+
+# Now iterate through the samples and mask the repeats.
+while read -r line;
+do
+  # round 1: annotate/mask simple repeats
+  RepeatMasker -pa 16 -a -e ncbi -dir 1simpleRepeatOutput -noint -xsmall reference-genome.fasta 2>&1 | tee ./runLogs/01_simplemask.log
 done < $1
