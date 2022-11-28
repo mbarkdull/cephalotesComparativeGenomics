@@ -1,33 +1,55 @@
 #!/bin/bash
 
-# Get the docker image and convert to Singularity, to run this on the BioHPC:
-singularity pull tetools.sif docker://dfam/tetools:latest
-
 # Make a directory for storing logs
 mkdir ./handlingRepeats
-cd ./handlingRepeats
-mkdir -p ./runLogs
+#mkdir -p ./runLogs
+
+# Get the docker image and convert to Singularity, to run this on the BioHPC:
+singularity pull tetools.sif docker://dfam/tetools:latest
 
 # Iterate through the list of samples, identifying repeats in the assemblies (i.e. in the consensus sequence files):
 # This requires that the sample name file be given as input on the command line:
 while read -r line;
 do
   export consensus=./consensusSequences/$line"Consensus.fa"
+  export final="./handlingRepeats/"$line"-rmod.log"
+  echo $line
+  if [ -s "$final" ]; then
+    echo "$final exists."
+    mv $line* ./handlingRepeats/
+    mv RM* ./handlingRepeats/
+  else
+    echo "$final does not exist."
+    # Build new RepeatModeler BLAST database with a name that includes an ID (e.g., a species code, specimen ID, etc.) and genus/species.
+    singularity exec --bind $PWD ./tetools.sif BuildDatabase -name $line -engine ncbi $consensus
 
-  # Build new RepeatModeler BLAST database with a name that includes an ID (e.g., a species code, specimen ID, etc.) and genus/species.
-  ./tetools.sif BuildDatabase -name $line -engine ncbi $consensus
+    # now run RepeatModeler with 16 cores and send results from STDOUT and STDERR streams to 1_repeatmodeler.log
+    # in my experience, this command takes 1-3 days with vertebrate genomes
+    singularity exec --bind $PWD ./tetools.sif RepeatModeler -pa 16 -engine ncbi -database $line 2>&1
 
-  # now run RepeatModeler with 16 cores and send results from STDOUT and STDERR streams to 1_repeatmodeler.log
-  # in my experience, this command takes 1-3 days with vertebrate genomes
-  RepeatModeler -pa 16 -engine ncbi -database $line 2>&1 | tee ./runLogs/00_repeatmodeler.log
+    mv $line* ./handlingRepeats/
+    mv RM* ./handlingRepeats/
+  fi
 done < $1
 
-# Make directories for RepeatMasker outputs:
-mkdir -p  1simpleRepeatOutput 2taxonSpecificOutput 3knownOutput 4unknownOutput
-
-# Now iterate through the samples and mask the repeats.
+# Add a prefix to each repetitive element for the species:
 while read -r line;
 do
+  echo $line
+  cat ./handlingRepeats/$line"-families.fa" | /programs/seqkit-0.15.0/seqkit fx2tab | awk -v awkvar="$line" '{ print awkvar"_"$0 }' | /programs/seqkit-0.15.0/seqkit tab2fx > ./handlingRepeats/prefix_$line"-families.fa"
+done < samples.txt
+
+echo "_________________"
+
+
+RepeatMasker -pa 16 -a -e ncbi -dir <out_dir> < ... other arguments... > reference-genome.fasta
+
+# Make directories for RepeatMasker outputs:
+#mkdir -p  1simpleRepeatOutput 2taxonSpecificOutput 3knownOutput 4unknownOutput
+
+# Now iterate through the samples and mask the repeats.
+#while read -r line;
+#do
   # round 1: annotate/mask simple repeats
-  RepeatMasker -pa 16 -a -e ncbi -dir 1simpleRepeatOutput -noint -xsmall reference-genome.fasta 2>&1 | tee ./runLogs/01_simplemask.log
-done < $1
+  #RepeatMasker -pa 16 -a -e ncbi -dir 1simpleRepeatOutput -noint -xsmall reference-genome.fasta 2>&1 | tee ./runLogs/01_simplemask.log
+#done < $1
