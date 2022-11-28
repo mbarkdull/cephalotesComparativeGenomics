@@ -35,8 +35,14 @@ done < $1
 # Add a prefix to each repetitive element for the species:
 while read -r line;
 do
-  echo $line
-  cat ./handlingRepeats/$line"-families.fa" | /programs/seqkit-0.15.0/seqkit fx2tab | awk -v awkvar="$line" '{ print awkvar"_"$0 }' | /programs/seqkit-0.15.0/seqkit tab2fx > ./handlingRepeats/prefix_$line"-families.fa"
+  export prefixedFile=./handlingRepeats/prefix_$line"-families.fa"
+  if [ -s "$prefixedFile" ]; then
+    echo "$prefixedFile exists."
+  else
+    echo "$prefixedFile does not exist."
+    echo $line
+    cat ./handlingRepeats/$line"-families.fa" | /programs/seqkit-0.15.0/seqkit fx2tab | awk -v awkvar="$line" '{ print awkvar"_"$0 }' | /programs/seqkit-0.15.0/seqkit tab2fx > ./handlingRepeats/prefix_$line"-families.fa"
+  fi
 done < samples.txt
 
 echo "_________________"
