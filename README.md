@@ -35,7 +35,9 @@ Reference-guided genome assembly has the following steps:
 These steps are all implemented by the scripts
 `./Scripts/referenceGuidedAssembly`, which requires two arguments:
 first, a list of samples, and two, the number of threads to use for
-multithreaded steps.
+multithreaded steps. In other words, run this script with the command
+`./Scripts/referenceGuidedAssembly [path to file listing samples]
+[number of threads to use when possible]`.
 
 Note that this script currently has a lot of hard-coded paths, including
 the paths to each program. The location and names of your raw sequencing
@@ -63,7 +65,27 @@ If you use this script, please cite:
 Once genomes are assembled, they require some processing before genes
 are identified.
 
-Repetitive regions of the genome must be soft-masked prior to
-annotation. To do this, we must first predict/identify transposable
-element sequences in the genomes, which we will do with RepeatModeler2,
-implemented in the Bash script `./Scripts/handlingRepeats`.
+Repetitive regions of the genome must be identified, then soft-masked,
+prior to annotation. To accomplish this task, we will:
+
+  - Identify repeats in each assembled genome, with RepeatModeler2;
+  - Soft mask our identified repeats with RepeatMasker;
+  - Soft mask known Hexapod repetitive elements with RepeatMasker, using
+    the RepeatMasker repeat database for Hexapoda.
+
+All of these steps are implemented in the script
+`./Scripts/handlingRepeats`, which can be run with the command
+`./Scripts/handlingRepeats [path to file listing samples] [number of
+threads to use when possible]`. Again, note that this script uses
+hard-coded paths to RepeatModeler and RepeatMasker on Cornell’s BioHPC,
+so you’ll likely need to change those to reflect your setup.
+
+Outputs of this step will appear in the directory `./handlingRepeats`.
+
+If you use this script, please cite:
+
+  - Flynn, Jullien M., et al. “RepeatModeler2 for automated genomic
+    discovery of transposable element families.” Proceedings of the
+    National Academy of Sciences 117.17 (2020): 9451-9457.
+  - Smit, AFA, Hubley, R & Green, P. RepeatMasker Open-4.0. 2013-2015
+    <http://www.repeatmasker.org>.
