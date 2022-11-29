@@ -47,7 +47,8 @@ done < samples.txt
 
 echo "_________________"
 
-# Iterate through samples (prefix_POW0461-families.fa) and mask the repeats.
+# Iterate through samples and mask the repeats.
+# First, mask the repeats that we identified with RepeatModeler.
   # -e sets the search engine, here using rmblastn
   # -pa sets the number of threads, here this is set on the command line
   # -a writes alignments in .align output file
@@ -56,5 +57,6 @@ echo "_________________"
 while read -r line;
 do
   export consensus=./consensusSequences/$line"Consensus.fa"
-  singularity exec --bind $PWD ./tetools.sif RepeatMasker -e ncbi -pa $2 -lib ./handlingRepeats/prefix_$line"-families.fa" -a  -dir ./handlingRepeats/ > $consensus
+  echo running RepeatMasker on $consensus
+  singularity exec --bind $PWD ./tetools.sif RepeatMasker -e ncbi -pa 22 -a -lib "./handlingRepeats/prefix_"$line"-families.fa" -dir ./handlingRepeats/ $consensus
 done < $1
