@@ -1,0 +1,31 @@
+#!/bin/bash
+
+# The goal of this script is to extract coding sequences from the newly sequenced Cephalotes genomes, using the .gff3 genome annotation file for Cephalotes varians.
+
+# Run this script as extractCDSwithGFF <path to list of sample names> <path to .gff3 file>
+
+# I think this can be done pretty simply with bedtools.
+# Add bedtools to path:
+export PATH=/programs/bedtools2-2.29.2/bin:$PATH
+
+# Make a folder for outputs:
+mkdir ./codingSequences/
+
+# Filter the C. varians .gff3 file to include only genes (not exons, 5' UTRs, etc.):
+export gffFile=$2
+cat $gffFile | grep gene > genesOnly.gff3
+
+# Iterate across all the samples:
+while read -r line;
+do
+  echo starting CDS extraction on $inputFasta at `date` >> cdsLog.txt
+
+  export inputFasta="./consensusSequences/"$line"Consensus.fa"
+  export outputFile="./codingSequences/"$line"_cds.fasta"
+  bedtools getfasta -fi $inputFasta -bed genesOnly.gff3 -fo $outputFile
+
+  echo finished CDS extraction on $inputFasta at `date` >> cdsLog.txt
+
+done < $1
+
+rm genesOnly.gff3

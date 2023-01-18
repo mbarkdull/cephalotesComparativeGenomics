@@ -58,3 +58,20 @@ If you use this script, please cite:
   + Flynn, Jullien M., et al. "RepeatModeler2 for automated genomic discovery of transposable element families." Proceedings of the National Academy of Sciences 117.17 (2020): 9451-9457.
   + Smit, AFA, Hubley, R & Green, P. RepeatMasker Open-4.0.
 2013-2015 <http://www.repeatmasker.org>.
+
+## Identifying genes in each genome
+Since we assembled our new genomes to a reference genome, genes can be identified quite simply using the genome annotation which accompanies our reference. 
+
+To do this, use the script `./Scripts/extractCDSwithGFF`, which requires two inputs:
+
+1. the path to your list of sample IDs
+2. the path to the GFF-formatted reference annotation. 
+
+This script will export a fasta file of gene sequences for each sample you sequenced, in the output directory `./codingSequences/`.
+
+## Identifying evolutionary changes associated with phenotypes
+### Identifying orthogroups with OrthoFinder
+### Assessing positive selection with BUSTED-PH
+### Assessing shifts in selection intensity with RELAX
+### Exploring evolution in non-coding elements
+https://onlinelibrary.wiley.com/doi/full/10.1111/mec.15982
