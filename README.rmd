@@ -75,6 +75,7 @@ If you use this script, please cite:
 
 ## Identifying evolutionary changes associated with phenotypes
 Now, we can move on to using our gene sequences to understand how genomes are evolving in association with a phenotype of interest. 
+
 ### Identifying orthogroups with OrthoFinder
 The first step in doing so is to identify groups of orthologous genes, eg. genes which are descended from a single gene in the last common ancestor of your species. We'll do this with OrthoFinder. 
 
@@ -85,7 +86,7 @@ If you use this script, please cite:
 
   + Haas, B., and A. Papanicolaou. “TransDecoder.” (2017).
   
-We will also run OrthoFinder with a user-specific species tree, to improve accuracy. If possible, obtain one for your group of species, by doing something like trimming a larger, high-quality phylogeny from the group you're working with. If no phylogeny for your species exists,  
+We will also run OrthoFinder with a user-specific species tree, to improve accuracy. If possible, obtain one for your group of species, by doing something like trimming a larger, high-quality phylogeny from the group you're working with. You can find an example R script for this process in `./Scripts/trimmingTree.R`. If no phylogeny for your species exists, you can run OrthoFinder without the option `-s`; this will allow OrthoFinder to infer a species tree for you. 
 
 ### Assessing positive selection with BUSTED-PH
 ### Assessing shifts in selection intensity with RELAX
