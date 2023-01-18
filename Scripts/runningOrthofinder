@@ -1,0 +1,27 @@
+#!/bin/bash
+
+# We need to run OrthoFinder to identify orthogroups for downstream analysis.
+# Run this script as ./Scripts/runningOrthofinder <max number of threads to use on computer> <full path to species tree>
+
+# Make a tmp directory for temporary files:
+mkdir /workdir/tmp
+# Make a directory for the results of the analysis:
+mkdir ./orthoFinder/
+mkdir ./orthoFinder/fasta
+# Add required programs to $PATH:
+export PATH=/programs/python2_link:$PATH
+export PATH=/programs/FastTree-2.1.10:$PATH
+export PATH=/workdir/$USER/FormicidaeMolecularEvolution/OrthoFinder/orthofinder:/workdir/$USER/FormicidaeMolecularEvolution/OrthoFinder/orthofinder/bin:/programs/muscle:/programs/RAxML-8.2.12:/programs/raxml-ng_v0.8.1:/programs/iqtree-1.6.10-Linux/bin:/programs/mafft/bin:$PATH
+source /programs/miniconda3/bin/activate orthofinder-2.5.4
+
+# Copy the translated gene files from translatingCodingSequences to the OrthoFinder directory:
+cp ./translatedData/outputFiles/translated* ./orthoFinder/fasta
+
+# Run Orthofinder:
+# -S sets the sequence search program; here we will use Diamond
+# -t sets the number of threads to use for parallelizable steps; here it is set on the command line.
+# -f starts the analysis from your directory of fasta files.
+# -M uses MSA to infer trees
+# -p specifies a directory for temp files.
+# -s will use a user-specified species tree.
+./orthofinder.py -S diamond -t $1 -f /workdir/$USER/FormicidaeMolecularEvolution/orthoFinder/fasta -M msa -p /workdir/tmp -s $2
