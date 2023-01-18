@@ -19,12 +19,12 @@ subsetTree <- keep.tip(fullTree,
                        tipsToKeep)
 
 # Create a dataframe that links species names to their sequencing codes:
-codes <- c("CSM3677", 
-           "POW0123",
-           "CSM3441",
-           "CSM3685",
-           "POW0461",
-           "CVAR")
+codes <- c("translated_CSM3677.fasta", 
+           "translated_POW0123.fasta",
+           "translated_CSM3441.fasta",
+           "translated_CSM3685.fasta",
+           "translated_POW0461.fasta",
+           "translated_CVAR.fasta")
 namesToCodes <- data.frame(tipsToKeep, 
                            codes)
 
