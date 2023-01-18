@@ -1,0 +1,32 @@
+#!/bin/bash
+
+# I want to run Transdecoder on all of the coding sequence files, so I can run them through OrthoFinder.
+# The command to run this is `./DataTransdecoder <list of sample names>`.
+# For some reason, TransDecoder seems to need R, so make sure you have an up-to-date version available:
+module load R/4.2.1-r9
+
+  while read -r line;
+  do
+    # Get the name of the coding sequence file produced by extractCDSwithGFF:
+    export nucleotideSequenceFile=$line"_cds.fasta"
+
+    echo "Translating the nucleotide sequences in $nucleotideSequenceFile"
+
+    # Now we can make a directory for translating the inputs and copy the cds files there:
+    mkdir ./translatedData
+    cd ./translatedData
+    pwd
+    cp ../codingSequences/$nucleotideSequenceFile ./$nucleotideSequenceFile
+
+    # Now we can run Transdecoder on the cleaned file:
+    echo "First, attempting TransDecoder run on $nucleotideSequenceFile"
+    /programs/TransDecoder-v5.5.0/TransDecoder.LongOrfs -t $nucleotideSequenceFile
+    /programs/TransDecoder-v5.5.0/TransDecoder.Predict -t $nucleotideSequenceFile --single_best_only
+
+    # Copy the output to a clearer name:
+    export transdecoderFile=$line"_cds.fasta.transdecoder.pep"
+    mkdir ./outputFiles/
+    cp $transdecoderFile ./outputFiles/translated_$line.fasta
+
+    cd ../
+  done < $1
