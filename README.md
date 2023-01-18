@@ -105,6 +105,12 @@ two inputs:
 This script will export a fasta file of gene sequences for each sample
 you sequenced, in the output directory `./codingSequences/`.
 
+If you use this script, please cite:
+
+  - Quinlan, Aaron R., and Ira M. Hall. “BEDTools: a flexible suite of
+    utilities for comparing genomic features.” Bioinformatics 26.6
+    (2010): 841-842.
+
 ## Identifying evolutionary changes associated with phenotypes
 
 ### Identifying orthogroups with OrthoFinder
