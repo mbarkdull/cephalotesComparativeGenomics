@@ -113,7 +113,24 @@ If you use this script, please cite:
 
 ## Identifying evolutionary changes associated with phenotypes
 
-### Identifying orthogroups with OrthoFinder
+Now, we can move on to using our gene sequences to understand how
+genomes are evolving in association with a phenotype of interest. \#\#\#
+Identifying orthogroups with OrthoFinder The first step in doing so is
+to identify groups of orthologous genes, eg. genes which are descended
+from a single gene in the last common ancestor of your species. We’ll do
+this with OrthoFinder.
+
+#### Prepping inputs
+
+OrthoFinder requires amino acid sequences as input, whereas we have
+nucleotide sequences. We’ll use TransDecoder to translate our nucleotide
+sequences to amino acids. To do this, use the script
+`./Scripts/translatingCodingSequences`, which requires, as input, the
+path to your list of sample IDs.
+
+If you use this script, please cite:
+
+  - Haas, B., and A. Papanicolaou. “TransDecoder.” (2017).
 
 ### Assessing positive selection with BUSTED-PH
 
