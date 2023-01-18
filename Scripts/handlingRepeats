@@ -9,6 +9,8 @@ singularity pull tetools.sif docker://dfam/tetools:latest
 
 # Iterate through the list of samples, identifying repeats in the assemblies (i.e. in the consensus sequence files):
 # This requires that the sample name file be given as input on the command line:
+
+# Model the repeats with RepeatModeler:
 while read -r line;
 do
   export consensus=./consensusSequences/$line"Consensus.fa"
@@ -25,7 +27,7 @@ do
 
     # now run RepeatModeler with 16 cores and send results from STDOUT and STDERR streams to 1_repeatmodeler.log
     # in my experience, this command takes 1-3 days with vertebrate genomes
-    singularity exec --bind $PWD ./tetools.sif RepeatModeler -pa $2 -engine ncbi -database $line 2>&1
+    singularity exec --bind $PWD ./tetools.sif RepeatModeler -threads $2 -engine ncbi -database $line 2>&1
 
     mv $line* ./handlingRepeats/
     mv RM* ./handlingRepeats/
@@ -57,7 +59,7 @@ echo "_________________"
 # Iterate through samples and mask the repeats.
 # First, mask the repeats that we identified with RepeatModeler.
   # -e sets the search engine, here using rmblastn
-  # -pa sets the number of threads, here this is set on the command line
+  # -threads sets the number of threads, here this is set on the command line
   # -a writes alignments in .align output file
   # -lib specifies the library of repeats, here we are using the results from RepeatModeler
   # -dir sets the output directory
@@ -73,7 +75,8 @@ do
   else
     echo "$simpleRepeatOutput does not exist."
     echo running RepeatMasker on $consensus
-    singularity exec --bind $PWD ./tetools.sif RepeatMasker -e ncbi -pa 22 -a -lib "./handlingRepeats/prefix_"$line"-families.fa" -dir ./handlingRepeats/ $consensus
+    singularity exec --bind $PWD ./tetools.sif RepeatMasker -e ncbi -threads 22 -a -xsmall -lib "./handlingRepeats/prefix_"$line"-families.fa" -dir ./handlingRepeats/ $consensus
+
     mv handlingRepeats/$line* ./handlingRepeats/simpleRepeats/
   fi
 done < $1
@@ -82,6 +85,8 @@ echo "_________________"
 echo "Done masking simple repeats"
 echo "_________________"
 
+
+# Second, mask hymenopteran repeats:
 while read -r line;
 do
   export consensus=./consensusSequences/$line"Consensus.fa"
@@ -92,7 +97,7 @@ do
   else
     echo "$hymenopteranRepeatOutput does not exist."
     echo running RepeatMasker on $consensus
-    singularity exec --bind $PWD ./tetools.sif RepeatMasker -e ncbi -pa 22 -a  -species hymenoptera -dir ./handlingRepeats/ $consensus
+    singularity exec --bind $PWD ./tetools.sif RepeatMasker -e ncbi -threads $2 -a -xsmall -species hymenoptera -dir ./handlingRepeats/ $consensus
     mv handlingRepeats/$line* ./handlingRepeats/hymenopteraRepeats/
   fi
 done < $1
