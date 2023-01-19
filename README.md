@@ -142,6 +142,24 @@ process in `./Scripts/trimmingTree.R`. If no phylogeny for your species
 exists, you can run OrthoFinder without the option `-s`; this will allow
 OrthoFinder to infer a species tree for you.
 
+### Running OrthoFinder
+
+You can run OrthoFinder on your list of samples with the script
+`./Scripts/runningOrthofinder`, which takes two inputs:
+
+  - the maximum number of threads to use on computer
+  - the full path to species tree
+
+If you use this script, please cite:
+
+  - Emms D.M. & Kelly S. (2019), Genome Biology 20:238
+
+If you use the species tree in your work then please also cite:
+
+  - Emms D.M. & Kelly S. (2017), MBE 34(12): 3267-3278
+  - Emms D.M. & Kelly S. (2018), bioRxiv
+    <https://doi.org/10.1101/267914>
+
 ### Assessing positive selection with BUSTED-PH
 
 ### Assessing shifts in selection intensity with RELAX

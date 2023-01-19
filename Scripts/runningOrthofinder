@@ -24,4 +24,4 @@ cp ./translatedData/outputFiles/translated* ./orthoFinder/fasta
 # -M uses MSA to infer trees
 # -p specifies a directory for temp files.
 # -s will use a user-specified species tree.
-./orthofinder.py -S diamond -t $1 -f /workdir/$USER/FormicidaeMolecularEvolution/orthoFinder/fasta -M msa -p /workdir/tmp -s $2
+orthofinder -S diamond -t $1 -f ./orthoFinder/fasta -M msa -p /workdir/tmp -s $2
