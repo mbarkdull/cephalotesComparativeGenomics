@@ -25,7 +25,7 @@ In addition, if this workflow has been useful to you, please cite the Github rep
 Reference-guided genome assembly has the following steps:
 
   1. Trim raw reads with Trimmomatic.
-  2. Map the trimmed reads back to the reference genome (I'll probably use NextGenMap for this).
+  2. Map the trimmed reads back to the reference genome, with NextGenMap.
   3. Call SNPs and indels with SAMtools. 
   4. Filter the calls by quality. 
   5. Assemble a consensus sequence. 
@@ -62,7 +62,13 @@ If you use this script, please cite:
 ## Identifying genes in each genome
 Since we assembled our new genomes to a reference genome, genes can be identified quite simply using the genome annotation which accompanies our reference. 
 
-To do this, use the script `./Scripts/extractCDSwithGFF`, which requires two inputs:
+### Aligning scaffolds
+Our genomes were assembled into scaffolds, mapped to the scaffolds of the reference. We now need to align the new genomes to our reference, so that we can find gene sequences based on the positions given by the reference genome annotation file. 
+This can be done using the R script `./Scripts/aligningScaffolds.R`, which will select out homologous scaffolds across your reference and new genomes, align them, then recombine them by genome into individual, aligned genomes. This process is parallelized using the excellent R package `furrr`. 
+
+### Extracting gene sequences
+
+Now that scaffolds have been aligned, we can extract out the sequence of each gene that was identified in the reference genome from our new genomes. To do this, use the script `./Scripts/extractCDSwithGFF`, which requires two inputs:
 
 1. the path to your list of sample IDs
 2. the path to the GFF-formatted reference annotation. 
