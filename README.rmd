@@ -66,6 +66,11 @@ Since we assembled our new genomes to a reference genome, genes can be identifie
 Our genomes were assembled into scaffolds, mapped to the scaffolds of the reference. We now need to align the new genomes to our reference, so that we can find gene sequences based on the positions given by the reference genome annotation file. 
 This can be done using the R script `./Scripts/aligningScaffolds.R`, which will select out homologous scaffolds across your reference and new genomes, align them, then recombine them by genome into individual, aligned genomes. This process is parallelized using the excellent R package `furrr`. 
 
+### Remapping the annotation file
+When we align our genomes, we may be shifting our reference genome scaffolds relative to the position of gene features in the annotation file. For instance, this might happen if our multiple sequence alignments indicate that our reference genome has a deletion relative to a newly sequenced genome. This means that the coordinates in the original annotation will no longer correctly point to the features we care about. 
+
+To solve this problem, we need to remap our genome annotation to the new, aligned version of the genome. 
+
 ### Extracting gene sequences
 
 Now that scaffolds have been aligned, we can extract out the sequence of each gene that was identified in the reference genome from our new genomes. To do this, use the script `./Scripts/extractCDSwithGFF`, which requires two inputs:

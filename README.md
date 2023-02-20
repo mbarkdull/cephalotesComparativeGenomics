@@ -106,6 +106,19 @@ scaffolds across your reference and new genomes, align them, then
 recombine them by genome into individual, aligned genomes. This process
 is parallelized using the excellent R package `furrr`.
 
+### Remapping the annotation file
+
+When we align our genomes, we may be shifting our reference genome
+scaffolds relative to the position of gene features in the annotation
+file. For instance, this might happen if our multiple sequence
+alignments indicate that our reference genome has a deletion relative to
+a newly sequenced genome. This means that the coordinates in the
+original annotation will no longer correctly point to the features we
+care about.
+
+To solve this problem, we need to remap our genome annotation to the
+new, aligned version of the genome.
+
 ### Extracting gene sequences
 
 Now that scaffolds have been aligned, we can extract out the sequence of
