@@ -4,11 +4,8 @@ library(msa)
 library(stringi)
 library(spgs)
 
-# The goal here is to test how well sequences extracted from the genome 
-# assembly based on the GFF3 annotation file match to the CVAR/CVAR_OGS_v1.0_longest_isoform.cds.fasta sequences.
-
-# First, we want to extract and concatenate the CDS sequences identified by the Cephalotes varians genome annotation. 
-#### Extract the coding sequences for each species using bedtools: ####
+#### First, we need to extract the individual CDS sequences from the aligned genomes. ####
+# We will do this using bedtools getfasta and the lifted-over annotation produced by flo. 
 # Read in the list of species and convert to a vector:
 species <- read.delim("./samples.txt",
                       header = FALSE) 
@@ -28,31 +25,27 @@ runBedtools <- function(i) {
 purrr::map(species,
            runBedtools)
 
-# Read in the nucleotide sequences of each CDS feature in the annotation file. 
-bedtoolsOutput <- phylotools::read.fasta("./codingSequences/CSM3441_cds.fasta")
-#bedtoolsOutput <- phylotools::read.fasta("testCDSExtraction.fasta")
+#### We need to combine the CDS sequences with annotation information to prepare for concatenation. ####
+# Read in the CDS sequences:
+individualCDSSequences <- phylotools::read.fasta("./codingSequences/CVAR_cds.fasta")
 
-# Read in the annotation file itself:
-annotationGFF3 <- read.gff("./CVAR/CVAR_OGS_v1.0_longest_isoform.gff3", 
-                       na.strings = c(".",
-                                      "?"),
-                       GFF3 = TRUE)
-annotationGFF3$Parent <- stringr::str_extract(annotationGFF3$attributes,
-                                          regex("Parent[^;]+", 
-                                                ignore_case = T))
+# Genes on the negative-sense strand must be handled differently than those on the positive-sense strand. 
+# For this reason, we need to read in the annotation file so we can categorize genes by strand. 
+# Read in the lifted over annotation file:
 annotation <- read.gff("floAttempt/run/annotationSolelyCDSTidiedTranscripts/lifted_cleaned.gff", 
                        na.strings = c(".",
                                       "?"),
                        GFF3 = FALSE)
+# Set the column names of the annotation file:
 colnames(annotation) <- c("seqid",
-                "source",
-                "type",
-                "start",
-                "end",
-                "score",
-                "strand",
-                "phase",
-                "attributes")
+                          "source",
+                          "type",
+                          "start",
+                          "end",
+                          "score",
+                          "strand",
+                          "phase",
+                          "attributes")
 
 # Split the attributes column to get individual columns for ID, Parent, and Name:
 annotation$ID <- stringr::str_extract(annotation$attributes,
@@ -67,23 +60,25 @@ annotation$Name <- stringr::str_extract(annotation$attributes,
 # For some reason, the sequence start value from the annotation file is 1 greater than the values in the CVAR all features sequences file
 # So fix that by subtracting 1 from the start value given in the annotation:
 annotation$startValueInAllFeatures <- annotation$start-1
-# Create a seq.name that will match to the seq.name in the CVAR all features file produced by bedtools getfasta:
-annotation$seq.name <- paste(annotation$seqid, 
+# Create a seq.name that will match to the seq.name in the individual CDS sequences file:
+annotation$seq.name <- paste(annotation$type,
+                             "::",
+                             annotation$seqid, 
                              ":", 
                              annotation$startValueInAllFeatures, 
                              "-", 
                              annotation$end, 
                              sep = "")
 
-# Do a full join on the two dataframes, so that we have the attributes of each feature, together with the sequence of each feature:
-mergedData <- full_join(bedtoolsOutput, 
-                        annotation, 
-                        by = c("seq.name" = "seq.name"))
+# Merge the individual CDS sequence dataframe with the annotations dataframe.
+# Now we have the sequences for each CDS of each gene, together with the sense information for each CDS:
+justCDS <- full_join(individualCDSSequences, 
+                     annotation, 
+                     by = c("seq.name" = "seq.name")) %>%
+  subset(type == "CDS")
 
-# Filter to just the CDS features:
-justCDS <- subset(mergedData, type == "CDS")
 
-#### Handle the positive strand genes ####
+#### Next, we need to concatenate the positive-sense individual CDS sequences into full gene sequences.  ####
 # Get a dataframe with just the positive strand genes (sequences and annotation information):
 justPositive <- subset(justCDS, strand == "+")
 
@@ -100,7 +95,8 @@ positivecdsSequences$seq.name <- stringr::str_remove(positivecdsSequences$Parent
 # And give them a unique name so we can tell where they came from:
 positivecdsSequences$sequenceName <- paste("generated_", positivecdsSequences$seq.name, sep = "")
 
-#### Handle the negative strand genes ####
+
+#### And then we can concatenate the negative-sense CDS sequences. ####
 # Now subset out the negative sense coding sequences. These are a bit trickier to extract and combine. 
 justNegative <- subset(justCDS, strand == "-")
 
@@ -153,8 +149,8 @@ library(furrr)
 future::plan(multisession)
 options(future.globals.maxSize= +Inf)
 justNegativeSequences <- furrr::future_map(justNegative$Parent,
-                                    possiblyConcatenatingMinusSenseGenes,
-                                    .progress = TRUE)
+                                           possiblyConcatenatingMinusSenseGenes,
+                                           .progress = TRUE)
 justNegativeSequences <- as.data.frame(do.call(rbind, justNegativeSequences)) %>%
   distinct()
 colnames(justNegativeSequences) <- c("Parent", "seq.text")
@@ -163,11 +159,17 @@ justNegativeSequences$seq.name <- stringr::str_remove(justNegativeSequences$Pare
 # And give them a unique name so we can tell where they came from:
 justNegativeSequences$sequenceName <- paste("generated_", justNegativeSequences$seq.name, sep = "")
 
-#### Combine both sets ###
+#### Combine the positive- and negative-sense genes and save a fasta: ####
 allConcatenatedSequences <- plyr::rbind.fill(justNegativeSequences, positivecdsSequences) %>%
   select(sequenceName, seq.name, seq.text) 
+seqinr::write.fasta(as.list(allConcatenatedSequences$seq.text),
+                    allConcatenatedSequences$sequenceName, 
+                    "test.fasta", 
+                    open = "w", 
+                    nbchar = 60, 
+                    as.string = FALSE)
 
-#### Check the new sequences align to the concatenated ones: ####
+#### This is troubleshooting code, which checks if the new sequences align to the concatenated ones: ####
 # Read in the longest isoforms cds file:
 desiredOutput <- phylotools::read.fasta("./CVAR/CVAR_OGS_v1.0_longest_isoform.trans.fasta")
 desiredOutput$sequenceName <- paste("real_",
@@ -208,9 +210,8 @@ checkingSimilarity <- function(i) {
 possiblyCheckingSimilarity <- possibly(checkingSimilarity, otherwise = "Error")
 
 # Map that function over all of the genes:
-subsetOfGenes <- sample(uniqueGenesToAlign, 1000)
+subsetOfGenes <- sample(uniqueGenesToAlign, 500)
 similarityValues <- furrr::future_map(subsetOfGenes, possiblyCheckingSimilarity)
-
 similarityValues <- as.data.frame(do.call(rbind, similarityValues))
 similarityValues$Name <- paste("Name=",
                                  similarityValues$V1,
@@ -260,22 +261,38 @@ similarityValues <- rbind(similarityValues,
 ggplot(data = similarityValues) + 
   geom_histogram(mapping = aes(x = as.numeric(V2)))
 
+
 # Check what's going on with any that align poorly:
+# Get the list of imperfect alignments:
 poorAlignments <- filter(similarityValues, 
                          V2 != 0)
+# Turn it into a vector of just the sequence names:
 poorAlignments <- poorAlignments$V1
+# Format it so that it'll match what's in the annotation file:
 poorAlignments <- paste("Parent=",
                         poorAlignments,
                         sep = "")
-# See which scaffold they are on in the original annotation:
+# See which scaffold those poorly aligning sequences are on in the ORIGINAL annotation:
+# Read in the original annotation:
+annotationGFF3 <- read.gff("./CVAR/CVAR_OGS_v1.0_longest_isoform.gff3", 
+                           na.strings = c(".",
+                                          "?"),
+                           GFF3 = TRUE)
+# Get a column with just the Parent attributes:
+annotationGFF3$Parent <- stringr::str_extract(annotationGFF3$attributes,
+                                              regex("Parent[^;]+", 
+                                                    ignore_case = T))
+# Get a list of the scaffolds that the poorly aligning sequences are on ORIGINALLY:
 originalScaffoldOfPoorAlignments <- filter(annotationGFF3,
                                            Parent %in% poorAlignments)
 originalScaffoldOfPoorAlignments <- originalScaffoldOfPoorAlignments %>%
   select(seqid) %>%
   distinct()
-# See if that scaffold is in the aligned genome yet:
-alignedGenome <- phylotools::read.fasta("./alignedGenomes/CVAR_alignedScaffolds.fasta")
+# See if those scaffolds are in the aligned genome yet:
+alignedGenome <- phylotools::read.fasta("./alignedGenomes/CSM3441Consensus_alignedScaffolds.fasta")
 alignedScaffolds <- alignedGenome$seq.name
 rm(alignedGenome)
-intersect(originalScaffoldOfPoorAlignments$seqid,
-          alignedScaffolds)
+# See if the original scaffolds of the poorly aligning sequences are scaffolds in the aligned genome. 
+scaffoldsThatAreAligned <- intersect(originalScaffoldOfPoorAlignments$seqid,
+                                     alignedScaffolds)
+scaffoldsThatAreAligned
