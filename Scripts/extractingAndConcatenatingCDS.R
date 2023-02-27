@@ -25,149 +25,176 @@ runBedtools <- function(i) {
 purrr::map(species,
            runBedtools)
 
-#### We need to combine the CDS sequences with annotation information to prepare for concatenation. ####
-# Read in the CDS sequences:
-individualCDSSequences <- phylotools::read.fasta("./codingSequences/CVAR_cds.fasta")
 
-# Genes on the negative-sense strand must be handled differently than those on the positive-sense strand. 
-# For this reason, we need to read in the annotation file so we can categorize genes by strand. 
-# Read in the lifted over annotation file:
-annotation <- read.gff("floAttempt/run/annotationSolelyCDSTidiedTranscripts/lifted_cleaned.gff", 
-                       na.strings = c(".",
-                                      "?"),
-                       GFF3 = FALSE)
-# Set the column names of the annotation file:
-colnames(annotation) <- c("seqid",
-                          "source",
-                          "type",
-                          "start",
-                          "end",
-                          "score",
-                          "strand",
-                          "phase",
-                          "attributes")
+#### Write one large function to concatenate and export the gene sequences for a single genome ####
+concatenateAndExport <- function(i) {
+  #### We need to combine the CDS sequences with annotation information to prepare for concatenation. ####
+  # Read in the CDS sequences:
+  print("Read in the CDS sequences:")
+  individualCDSSequences <- phylotools::read.fasta(paste(  './codingSequences/',
+                                                           i,
+                                                           '_cds.fasta', 
+                                                           sep = ""))
 
-# Split the attributes column to get individual columns for ID, Parent, and Name:
-annotation$ID <- stringr::str_extract(annotation$attributes,
-                                      regex("ID[^;]+", 
-                                            ignore_case = T))
-annotation$Parent <- stringr::str_extract(annotation$attributes,
-                                          regex("Parent[^;]+", 
-                                                ignore_case = T))
-annotation$Name <- stringr::str_extract(annotation$attributes,
-                                        regex("Name[^;]+", 
-                                              ignore_case = T))
-# For some reason, the sequence start value from the annotation file is 1 greater than the values in the CVAR all features sequences file
-# So fix that by subtracting 1 from the start value given in the annotation:
-annotation$startValueInAllFeatures <- annotation$start-1
-# Create a seq.name that will match to the seq.name in the individual CDS sequences file:
-annotation$seq.name <- paste(annotation$type,
-                             "::",
-                             annotation$seqid, 
-                             ":", 
-                             annotation$startValueInAllFeatures, 
-                             "-", 
-                             annotation$end, 
-                             sep = "")
-
-# Merge the individual CDS sequence dataframe with the annotations dataframe.
-# Now we have the sequences for each CDS of each gene, together with the sense information for each CDS:
-justCDS <- full_join(individualCDSSequences, 
-                     annotation, 
-                     by = c("seq.name" = "seq.name")) %>%
-  subset(type == "CDS")
-
-
-#### Next, we need to concatenate the positive-sense individual CDS sequences into full gene sequences.  ####
-# Get a dataframe with just the positive strand genes (sequences and annotation information):
-justPositive <- subset(justCDS, strand == "+")
-
-# Group by their parent, so that all of the exons for each gene are grouped together, then arrange by start site:
-justPositiveGrouped <- group_by(justPositive, Parent) %>% 
-  arrange(start) %>%
-  distinct()
-
-# And paste together the nucleotide sequences for each group, so that the individual exon sequences are combined into a full gene sequence:
-positivecdsSequences <- justPositiveGrouped %>%
-  summarise(seq.text = paste(seq.text, collapse = ""))
-# Give the sequences a name that will allow them to match the name in the CVAR longest isoform CDS file; that way we can align them later and check if our method worked:
-positivecdsSequences$seq.name <- stringr::str_remove(positivecdsSequences$Parent, "Parent=") 
-# And give them a unique name so we can tell where they came from:
-positivecdsSequences$sequenceName <- paste("generated_", positivecdsSequences$seq.name, sep = "")
-
-
-#### And then we can concatenate the negative-sense CDS sequences. ####
-# Now subset out the negative sense coding sequences. These are a bit trickier to extract and combine. 
-justNegative <- subset(justCDS, strand == "-")
-
-# Write a function to reverse complement and then combine the coding sequences for a single gene:
-concatenatingMinusSenseGenes <- function(i) {
-  # Get one gene as a test case:
-  gene00002 <- subset(justNegative, Parent == i)
+  # Genes on the negative-sense strand must be handled differently than those on the positive-sense strand. 
+  # For this reason, we need to read in the annotation file so we can categorize genes by strand. 
+  # Read in the lifted over annotation file:
+  print("Read in the annotation")
+  annotation <- read.gff("floAttempt/run/annotationSolelyCDSTidiedTranscripts/lifted_cleaned.gff", 
+                         na.strings = c(".",
+                                        "?"),
+                         GFF3 = FALSE)
+  # Set the column names of the annotation file:
+  colnames(annotation) <- c("seqid",
+                            "source",
+                            "type",
+                            "start",
+                            "end",
+                            "score",
+                            "strand",
+                            "phase",
+                            "attributes")
   
-  # Sort by the start value:
-  gene00002 <- gene00002 %>% 
+  # Split the attributes column to get individual columns for ID, Parent, and Name:
+  annotation$ID <- stringr::str_extract(annotation$attributes,
+                                        regex("ID[^;]+", 
+                                              ignore_case = T))
+  annotation$Parent <- stringr::str_extract(annotation$attributes,
+                                            regex("Parent[^;]+", 
+                                                  ignore_case = T))
+  annotation$Name <- stringr::str_extract(annotation$attributes,
+                                          regex("Name[^;]+", 
+                                                ignore_case = T))
+  # For some reason, the sequence start value from the annotation file is 1 greater than the values in the CVAR all features sequences file
+  # So fix that by subtracting 1 from the start value given in the annotation:
+  annotation$startValueInAllFeatures <- annotation$start-1
+  # Create a seq.name that will match to the seq.name in the individual CDS sequences file:
+  annotation$seq.name <- paste(annotation$type,
+                               "::",
+                               annotation$seqid, 
+                               ":", 
+                               annotation$startValueInAllFeatures, 
+                               "-", 
+                               annotation$end, 
+                               sep = "")
+  
+  # Merge the individual CDS sequence dataframe with the annotations dataframe.
+  # Now we have the sequences for each CDS of each gene, together with the sense information for each CDS:
+  justCDS <- full_join(individualCDSSequences, 
+                       annotation, 
+                       by = c("seq.name" = "seq.name")) %>%
+    subset(type == "CDS")
+  
+  
+  #### Next, we need to concatenate the positive-sense individual CDS sequences into full gene sequences.  ####
+  # Get a dataframe with just the positive strand genes (sequences and annotation information):
+  justPositive <- subset(justCDS, strand == "+")
+  
+  # Group by their parent, so that all of the exons for each gene are grouped together, then arrange by start site:
+  justPositiveGrouped <- group_by(justPositive, Parent) %>% 
     arrange(start) %>%
     distinct()
   
-  # Complement each exon:
-  for (row in 1:nrow(gene00002)) {
-    strand <- gene00002[row, "strand"]
-    sequenceRow  <- gene00002[row, "seq.text"]
-    # sequence <- as.character(sequenceRow[1,1])
+  # And paste together the nucleotide sequences for each group, so that the individual exon sequences are combined into a full gene sequence:
+  print("Handling positive-sense genes")
+  positivecdsSequences <- justPositiveGrouped %>%
+    summarise(seq.text = paste(seq.text, collapse = ""))
+  # Give the sequences a name that will allow them to match the name in the CVAR longest isoform CDS file; that way we can align them later and check if our method worked:
+  positivecdsSequences$seq.name <- stringr::str_remove(positivecdsSequences$Parent, "Parent=") 
+  # And give them a unique name so we can tell where they came from:
+  positivecdsSequences$sequenceName <- paste(i,
+                                             "_", 
+                                             positivecdsSequences$seq.name, 
+                                             sep = "")
+  
+  
+  #### And then we can concatenate the negative-sense CDS sequences. ####
+  # Now subset out the negative sense coding sequences. These are a bit trickier to extract and combine. 
+  justNegative <- subset(justCDS, strand == "-")
+  
+  # Write a function to reverse complement and then combine the coding sequences for a single gene:
+  concatenatingMinusSenseGenes <- function(i) {
+    # Get one gene as a test case:
+    gene00002 <- subset(justNegative, Parent == i)
     
-    if (strand == "-") {
-      gene00002[row, "seq.text"] <- spgs::complement(sequenceRow,
-                                                     case = "as is" )
-    } else {
-      print("Plus")
+    # Sort by the start value:
+    gene00002 <- gene00002 %>% 
+      arrange(start) %>%
+      distinct()
+    
+    # Complement each exon:
+    for (row in 1:nrow(gene00002)) {
+      strand <- gene00002[row, "strand"]
+      sequenceRow  <- gene00002[row, "seq.text"]
+      # sequence <- as.character(sequenceRow[1,1])
+      
+      if (strand == "-") {
+        gene00002[row, "seq.text"] <- spgs::complement(sequenceRow,
+                                                       case = "as is" )
+      } else {
+        print("Plus")
+      }
     }
+    
+    # Group by their parent and then arrange in descending order within the group:
+    gene00002 <- group_by(gene00002, Parent) %>% 
+      arrange(start, .by_group = TRUE)
+    
+    # And paste together the nucleotide sequences for each group:
+    gene00002 <- gene00002 %>%
+      summarise(seq.text = paste(seq.text, collapse = ""))
+    
+    # Then reverse:
+    gene00002$seq.text <- stringi::stri_reverse(gene00002$seq.text)
+    
+    # Get the results:
+    results <- c(gene00002$Parent, gene00002$seq.text)
+    return(results)
   }
   
-  # Group by their parent and then arrange in descending order within the group:
-  gene00002 <- group_by(gene00002, Parent) %>% 
-    arrange(start, .by_group = TRUE)
+  # Make a safe version with possibly:
+  possiblyConcatenatingMinusSenseGenes <- possibly(concatenatingMinusSenseGenes, 
+                                                   otherwise = "error")
   
-  # And paste together the nucleotide sequences for each group:
-  gene00002 <- gene00002 %>%
-    summarise(seq.text = paste(seq.text, collapse = ""))
+  # Map it over all the minus sense genes:
+  print("Handling negative-sense genes")
+  library(furrr)
+  future::plan(multisession)
+  options(future.globals.maxSize= +Inf)
+  justNegativeSequences <- furrr::future_map(justNegative$Parent,
+                                             possiblyConcatenatingMinusSenseGenes,
+                                             .progress = TRUE)
+  justNegativeSequences <- as.data.frame(do.call(rbind, justNegativeSequences)) %>%
+    distinct()
+  colnames(justNegativeSequences) <- c("Parent", "seq.text")
+  # Give the sequences a name that will allow them to match the name in the CVAR longest isoform CDS file:
+  justNegativeSequences$seq.name <- stringr::str_remove(justNegativeSequences$Parent, "Parent=") 
+  # And give them a unique name so we can tell where they came from:
+  justNegativeSequences$sequenceName <- paste(i,
+                                              "_", 
+                                              justNegativeSequences$seq.name, 
+                                              sep = "")
   
-  # Then reverse:
-  gene00002$seq.text <- stringi::stri_reverse(gene00002$seq.text)
-  
-  # Get the results:
-  results <- c(gene00002$Parent, gene00002$seq.text)
-  return(results)
+  #### Combine the positive- and negative-sense genes and save a fasta: ####
+  allConcatenatedSequences <- plyr::rbind.fill(justNegativeSequences, positivecdsSequences) %>%
+    select(sequenceName, seq.name, seq.text) 
+  print("Exporting all genes")
+  seqinr::write.fasta(as.list(allConcatenatedSequences$seq.text),
+                      allConcatenatedSequences$sequenceName, 
+                      paste(i,
+                            "_geneSequences.fasta", 
+                            sep = ""), 
+                      open = "w", 
+                      nbchar = 60, 
+                      as.string = FALSE)
 }
-
-# Make a safe version with possibly:
-possiblyConcatenatingMinusSenseGenes <- possibly(concatenatingMinusSenseGenes, 
-                                                 otherwise = "error")
-
-# Map it over all the minus sense genes:
-library(furrr)
-future::plan(multisession)
-options(future.globals.maxSize= +Inf)
-justNegativeSequences <- furrr::future_map(justNegative$Parent,
-                                           possiblyConcatenatingMinusSenseGenes,
-                                           .progress = TRUE)
-justNegativeSequences <- as.data.frame(do.call(rbind, justNegativeSequences)) %>%
-  distinct()
-colnames(justNegativeSequences) <- c("Parent", "seq.text")
-# Give the sequences a name that will allow them to match the name in the CVAR longest isoform CDS file:
-justNegativeSequences$seq.name <- stringr::str_remove(justNegativeSequences$Parent, "Parent=") 
-# And give them a unique name so we can tell where they came from:
-justNegativeSequences$sequenceName <- paste("generated_", justNegativeSequences$seq.name, sep = "")
-
-#### Combine the positive- and negative-sense genes and save a fasta: ####
-allConcatenatedSequences <- plyr::rbind.fill(justNegativeSequences, positivecdsSequences) %>%
-  select(sequenceName, seq.name, seq.text) 
-seqinr::write.fasta(as.list(allConcatenatedSequences$seq.text),
-                    allConcatenatedSequences$sequenceName, 
-                    "test.fasta", 
-                    open = "w", 
-                    nbchar = 60, 
-                    as.string = FALSE)
+possiblyConcatenateAndExport <- purrr::possibly(concatenateAndExport,
+                                                otherwise = "error")
+#### Map that over all the genomes: ####
+species <- read.delim("./samples.txt",
+                      header = FALSE)
+purrr::map(species$V1, 
+           possiblyConcatenateAndExport)
 
 #### This is troubleshooting code, which checks if the new sequences align to the concatenated ones: ####
 # Read in the longest isoforms cds file:
