@@ -9,18 +9,60 @@ wget -c https://github.com/yeban/flo/archive/master.tar.gz -O flo.tar.gz
 tar xvf flo.tar.gz
 mv flo-master flo
 
-# Make a directory for this run:
-mkdir floAttempt
-cd floAttempt
-
-# Copy over example configuration file from where you installed flo to project dir:
-cp ../flo/opts_example.yaml flo_opts.yaml
+# Change into the directory for running flo, created by the script `./Scripts/annotationFilteringToCDS.R`:
+mkdir liftoverAnnotation
+cd liftoverAnnotation
 
 # Install flo's dependencies in ext/ directory in the project dir:
+# My attempt to install their version of genometools fails, so I just specify the path to the BioHPC install in my .yaml file.
 ../flo/scripts/install.sh
 
-# Remove features that aren't gene, mRNA, or CDS with your R script. I think I might be able to replace this step by running the next step and removing the different features that I don't want.
-# annotationFilteringToCDS.R
+# create the configuration file:
+cat >flo_opts.yaml <<EOL
+# Location of binaries expected by flo.
+#
+# These will be added to PATH before the pipeline is run. The paths below
+# are created by `scripts/install.sh`.Comment out or edit the paths based
+# on how you installed UCSC-Kent toolkit, GNU Parallel and genometools.
+:add_to_path:
+  - 'ext/kent/bin'
+  - 'ext/parallel-20150722/src'
+  - '${1}'
+
+# Location of source and target assemblies.
+#
+# If migrating annotations from assembly A to assembly B, A is the source
+# and B is the target. Source and target assemblies are specified as path
+# to the corresponding FASTA files (must end in .fa).
+:source_fa: '${2}'
+:target_fa: '${3}'
+
+# Number of processes that will be used to parallelise flo. Ideally, this
+# will be the number of CPU cores you have.
+:processes: '${4}'
+
+# Parameters to run BLAT with.
+#
+# In addition to the options specified here, -noHead option is set by flo.
+# -noHead simply causes the output BLAT output files to not have a header.
+# It doesn't impact accuracy of results.
+#
+# Empty string is equivalent to:
+#
+#   -t=dna -q=dna -tileSize=11 -stepSize=11 -oneOff=0 -minMatch=2
+#   -minScore=30 -minIdentity=90 -maxGap=2 -maxIntron=75000
+#
+# The default string defined below is a suitable trade-off between running
+# time and sensitivity.
+:blat_opts: '-fastMap -tileSize=12 -minIdentity=${5}'
+
+# Path to the GFF files containing annotations on the source assembly that
+# will be lifted to the target assembly.
+:lift:
+  - './annotationSolelyCDSTidiedTranscripts.gff3'
+EOL
+
+cat flo_opts.yaml
 
 # Process the annotation file with genometools/gt gff3. I think the main thing this does is sort the features by position and add missing "##sequence-region" lines at the beginning of each block of features that are found on the same scaffold.
 /programs/genometools-1.5.9/bin/gt gff3 -tidy -sort -addids -retainids ./annotationSolelyCDS.gff3 > ./annotationSolelyCDSTidied.gff3

@@ -71,9 +71,27 @@ When we align our genomes, we may be shifting our reference genome scaffolds rel
 
 To solve this problem, we need to remap our genome annotation to the new, aligned version of the genome. We can do this using a tool called flo, developed by the Wurm lab for their work on the fire ant genome. 
 
-If you use flo, please cite the following paper:
+To do this:
 
-The fire ant social chromosome supergene variant Sb shows low diversity but high divergence from SB. 2017. R Pracana, A Priyam, I Levantis, Y Wurm. Molecular Ecology, doi: 10.1111/mec.14054.
+  1. First, we need to filter the reference annotation to include only CDS features. You can do this with the R script, `./Scripts/annotationFilteringToCDS.R`. The script will output the filtered annotation in a new directory, `./liftoverAnnotation/`.
+  2. Next, run the script `./Scripts/runningFlo`. This script does several things, including:
+      + install flo and its dependencies. 
+      + create the configuration file, `flo_opts.yaml`.
+      + process the filtered annotation file we just produced using genometools into a format that flo will accept. 
+      + run flo!
+  
+Because this script creates the configuration file for you, you'll have to provide several pieces of information as command-line options:
+
+  1. The path to your genometools install, something like `/programs/genometools-1.5.9/bin/`
+  2. The path to your reference genome assembly, something like `/local/workdir/mb2337/cephalotesComparativeGenomics/CVAR/CVAR_genome_v1.0.fasta`
+  3. The path to your new, aligned genome assembly, something like `/local/workdir/mb2337/cephalotesComparativeGenomics/alignedGenomes/CVAR_alignedScaffolds.fasta`
+  4. The number of CPU cores used to parallelise flo; should be near or equal to the number of cores on your machine. 
+  5. The minimum identity parameter used by BLAT; I used `95`
+
+If you use this script, please cite both flo itself, and GNU Parallel:
+
+  + The fire ant social chromosome supergene variant Sb shows low diversity but high divergence from SB. 2017. R Pracana, A Priyam, I Levantis, Y Wurm. Molecular Ecology, doi: 10.1111/mec.14054.
+  +Tange O. GNU Parallel - the command-line power tool. login. 2011;36:42–7.
 
 ### Extracting gene sequences
 
