@@ -69,7 +69,11 @@ This can be done using the R script `./Scripts/aligningScaffolds.R`, which will 
 ### Remapping the annotation file
 When we align our genomes, we may be shifting our reference genome scaffolds relative to the position of gene features in the annotation file. For instance, this might happen if our multiple sequence alignments indicate that our reference genome has a deletion relative to a newly sequenced genome. This means that the coordinates in the original annotation will no longer correctly point to the features we care about. 
 
-To solve this problem, we need to remap our genome annotation to the new, aligned version of the genome. 
+To solve this problem, we need to remap our genome annotation to the new, aligned version of the genome. We can do this using a tool called flo, developed by the Wurm lab for their work on the fire ant genome. 
+
+If you use flo, please cite the following paper:
+
+The fire ant social chromosome supergene variant Sb shows low diversity but high divergence from SB. 2017. R Pracana, A Priyam, I Levantis, Y Wurm. Molecular Ecology, doi: 10.1111/mec.14054.
 
 ### Extracting gene sequences
 

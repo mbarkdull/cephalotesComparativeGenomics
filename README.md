@@ -117,7 +117,14 @@ original annotation will no longer correctly point to the features we
 care about.
 
 To solve this problem, we need to remap our genome annotation to the
-new, aligned version of the genome.
+new, aligned version of the genome. We can do this using a tool called
+flo, developed by the Wurm lab for their work on the fire ant genome.
+
+If you use flo, please cite the following paper:
+
+The fire ant social chromosome supergene variant Sb shows low diversity
+but high divergence from SB. 2017. R Pracana, A Priyam, I Levantis, Y
+Wurm. Molecular Ecology, doi: 10.1111/mec.14054.
 
 ### Extracting gene sequences
 
