@@ -8,11 +8,29 @@ library(spgs)
 # assembly based on the GFF3 annotation file match to the CVAR/CVAR_OGS_v1.0_longest_isoform.cds.fasta sequences.
 
 # First, we want to extract and concatenate the CDS sequences identified by the Cephalotes varians genome annotation. 
+#### Extract the coding sequences for each species using bedtools: ####
+# Read in the list of species and convert to a vector:
+species <- read.delim("./samples.txt",
+                      header = FALSE) 
+species <- species$V1
+# Write a function to run bedtools on each species, using the system() command:
+runBedtools <- function(i) {
+  bedtoolsCommand <- paste('/programs/bin/bedtools/bin/bedtools getfasta -fi ./alignedGenomes/',
+                           i,
+                           'Consensus_alignedScaffolds.fasta -bed ./floAttempt/run/annotationSolelyCDSTidiedTranscripts/lifted_cleaned.gff -name -fo ./codingSequences/',
+                           i,
+                           '_cds.fasta',
+                           sep = "")
+  cat(bedtoolsCommand)
+  system(bedtoolsCommand)
+}
+# Run that function on all the newly sequenced species:
+purrr::map(species,
+           runBedtools)
 
-# Read in the actual nucleotide sequences of each feature in the annotation file. 
-# This file was generated using bedtools getfasta on the file CVAR/CVAR_genome_v1.0.fasta
-#bedtoolsOutput <- phylotools::read.fasta("./codingSequences/CSM3441_allFeatures.fasta")
-bedtoolsOutput <- phylotools::read.fasta("testCDSExtraction.fasta")
+# Read in the nucleotide sequences of each CDS feature in the annotation file. 
+bedtoolsOutput <- phylotools::read.fasta("./codingSequences/CSM3441_cds.fasta")
+#bedtoolsOutput <- phylotools::read.fasta("testCDSExtraction.fasta")
 
 # Read in the annotation file itself:
 annotationGFF3 <- read.gff("./CVAR/CVAR_OGS_v1.0_longest_isoform.gff3", 
