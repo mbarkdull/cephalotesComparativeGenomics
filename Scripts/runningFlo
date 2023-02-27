@@ -1,0 +1,32 @@
+#!/bin/bash
+### Remapping the annotation file to the newly aligned genome:
+
+# Add ruby to your paths
+export PATH=/programs/ruby/bin:$PATH
+
+# Download flo:
+wget -c https://github.com/yeban/flo/archive/master.tar.gz -O flo.tar.gz
+tar xvf flo.tar.gz
+mv flo-master flo
+
+# Make a directory for this run:
+mkdir floAttempt
+cd floAttempt
+
+# Copy over example configuration file from where you installed flo to project dir:
+cp ../flo/opts_example.yaml flo_opts.yaml
+
+# Install flo's dependencies in ext/ directory in the project dir:
+../flo/scripts/install.sh
+
+# Remove features that aren't gene, mRNA, or CDS with your R script. I think I might be able to replace this step by running the next step and removing the different features that I don't want.
+# annotationFilteringToCDS.R
+
+# Process the annotation file with genometools/gt gff3. I think the main thing this does is sort the features by position and add missing "##sequence-region" lines at the beginning of each block of features that are found on the same scaffold.
+/programs/genometools-1.5.9/bin/gt gff3 -tidy -sort -addids -retainids ./annotationSolelyCDS.gff3 > ./annotationSolelyCDSTidied.gff3
+
+# Remove features that aren't allowed (genes):
+../flo/gff_remove_feats.rb gene ./annotationSolelyCDSTidied.gff3 \ > ./annotationSolelyCDSTidiedTranscripts.gff3
+
+# Run flo:
+rake -f ../flo/Rakefile
