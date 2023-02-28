@@ -12,7 +12,9 @@ annotation <- read.gff("./CVAR/CVAR_OGS_v1.0_longest_isoform.gff3",
 
 # Filter to just CDS features:
 annotationSolelyCDS <- filter(annotation,
-                              type == "CDS")
+                              type == "CDS" |
+                                type == "mRNA" |
+                                type == "gene")
 
 # Replace NAs in the score column with `.` so that gt doesn't get mad:
 annotationSolelyCDS$score <- as.character(annotationSolelyCDS$score)
