@@ -102,7 +102,7 @@ the reference. We now need to align the new genomes to our reference, so
 that we can find gene sequences based on the positions given by the
 reference genome annotation file. Because we are working with whole
 genomes that contain very large scaffolds, we will use the aligner
-[Progressivecactus](https://github.com/ComparativeGenomicsToolkit/cactus),
+[Progressivecactus](https://github.com/ComparativeGenomicsToolkit/cactus/blob/master/doc/progressive.md),
 as implemented in the script `./Scripts/alignWithProgressiveCactus`.
 
 As input, Progressivecactus requires a file that contains:
@@ -116,6 +116,18 @@ As input, Progressivecactus requires a file that contains:
 `./Scripts/alignWithProgressiveCactus` will construct this input file,
 run Progressivecactus on the genomes, and then produce an aligned FASTA
 file for each genome.
+
+If you use this script, please cite Progressivecactus and its
+dependency, hal:
+
+  - Armstrong, Joel, et al. “Progressive Cactus is a multiple-genome
+    aligner for the thousand-genome era.” Nature 587.7833 (2020):
+    246-251.
+  - Glenn Hickey, Benedict Paten, Dent Earl, Daniel Zerbino, David
+    Haussler, HAL: a hierarchical format for storing and analyzing
+    multiple genome alignments, Bioinformatics, Volume 29, Issue 10, May
+    2013, Pages 1341–1342,
+    <https://doi.org/10.1093/bioinformatics/btt128>
 
 If your scaffolds are fairly small, you can alternatively align them
 with the R script `./Scripts/aligningScaffolds.R`, which will select out
