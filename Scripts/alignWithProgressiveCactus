@@ -1,57 +1,40 @@
 #!/bin/bash
 
-# Align with processivecactus
+# This will align my genomes with processivecactus
 
-# Copy the CVAR genome to the consensus sequences directory:
+# First, copy the CVAR genome to the consensus sequences directory, with all of the new genomes:
 cp ./CVAR/CVAR_genome_v1.0.fasta ./consensusSequences/CVARConsensus.fa
 
-# Create a control file with a species tree and then space-separated lists of species names and genome locations
+# Progressivecactus requires a file that contains:
+#   1. A newick tree of the sequences to be aligned. I created this tree with the R script prepForProgressiveCactus.R
+#   2. A two-column list of the sequences to be aligned and the paths to the files containing those sequences.
+# Here, we will create that file:
 cp /workdir/mb2337/cephalotesComparativeGenomics/consensusTree.txt cactusInput.txt
 echo >>cactusInput.txt
 for f in /workdir/mb2337/cephalotesComparativeGenomics/consensusSequences/*.fa; do echo -ne "$(basename $f)\t$f\n"; done >>cactusInput.txt
 
-#run through singularity, bind the current directory ($PWD) with data files as /data directory in container
-# also a problem of it looking for input in the $HOME directory
+# Now we can run Progressivecactus on our set of genomes.
+# On the Cornell BioHPC, we must run through singularity, bind the current directory ($PWD) with data files as the /data directory in the container
 singularity run --bind $PWD:/data,$PWD,/workdir/mb2337/cephalotesComparativeGenomics/consensusSequences/ /programs/cactus-2.2.3/cactus.sif cactus /data/jobStore /data/cactusInput.txt /data/cactusOutput.hal --binariesMode local
 
-# Turn the hal output into a fasta:
-# List the genomes in the aligment:
+# Progressivecactus outputs a .hal file; we want to turn the hal output into a fasta:
+# First, list all of the genomes in the aligment and put that into a text file:
 singularity run --bind $PWD:/data,$PWD,/workdir/mb2337/cephalotesComparativeGenomics/individualScaffolds/ /programs/cactus-2.2.3/cactus.sif halStats ./CVAR_scaf_33.hal > halInfo.txt
-# Store the first column of that text file so we can loop over and extract fastas:
+# Now read through that text file, looping over each genome to extract it as a fasta:
 while read -r line;
 do
-  # This creates a variable, url, that holds the information about the download url on this line of the input file:
+  # This creates a variable, fasta, that stores the first column of the halInfo.txt file:
+  # Sometimes this is a genome, sometimes it's the name of an ancestral sequence that Progressivecactus inferred.
   export fasta=`echo "$line" | awk -F',' '{print $1}'`
   echo $fasta
+  # If it's actually a genome that we want to extract, then extract it:
   if [[ $fasta == *.fasta ]]
   then
     echo "Exporting fasta";
     # Convert a single genome from hal to fasta:
-    #DNA sequences (without any alignment information) can be extracted from HAL files in FASTA format using  hal2fasta
+    # DNA sequences (without any alignment information) can be extracted from HAL files in FASTA format using  hal2fasta
     singularity run --bind $PWD:/data,$PWD,/workdir/mb2337/cephalotesComparativeGenomics/individualScaffolds/ /programs/cactus-2.2.3/cactus.sif hal2fasta ./CVAR_scaf_33.hal $fasta > $fasta
   else
+    # Otherwise just tell us that it was some other kind of information:
     echo "not a genome to export"; fi
 done < halInfo.txt
-
-
-
-
-
-
-export PATH=/programs/hal-2.2/hal/:$PATH
-export PYTHONPATH=/programs/hal-2.2
-/programs/hal/bin/hal2maf ./CVAR_scaf_33.hal ./test.maf
-
-
-
-
-
-singularity run --bind $PWD:/data /programs/cactus-2.2.3/cactus.sif cactus /data/jobStore /data/evolverMammals.txt /data/evolverMammals.hal --root mr --binariesMode local
-singularity run --bind $PWD:/data /programs/cactus-2.2.3/cactus.sif cactus-hal2maf ./js ./evolverMammals.hal evolverMammals.maf.gz --refGenome simHuman_chr6 --chunkSize 1000000 --noAncestors --onlyOrthologs
-
-
-
-
-singularity shell /programs/cactus-2.2.3/cactus.sif
-
-cat /home/cactus/cactus_env/lib/python3.10/site-packages/cactus/progressive/multiCactusTree.py
