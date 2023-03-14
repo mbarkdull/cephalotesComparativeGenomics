@@ -19,7 +19,7 @@ singularity run --bind $PWD:/data,$PWD,/workdir/mb2337/cephalotesComparativeGeno
 
 # Progressivecactus outputs a .hal file; we want to turn the hal output into a fasta:
 # First, list all of the genomes in the aligment and put that into a text file:
-singularity run --bind $PWD:/data,$PWD,/workdir/mb2337/cephalotesComparativeGenomics/individualScaffolds/ /programs/cactus-2.2.3/cactus.sif halStats ./CVAR_scaf_33.hal > halInfo.txt
+singularity run --bind $PWD:/data,$PWD,/workdir/mb2337/cephalotesComparativeGenomics/individualScaffolds/ /programs/cactus-2.2.3/cactus.sif halStats ./cactusOutput.hal > halInfo.txt
 # Now read through that text file, looping over each genome to extract it as a fasta:
 while read -r line;
 do
@@ -28,12 +28,12 @@ do
   export fasta=`echo "$line" | awk -F',' '{print $1}'`
   echo $fasta
   # If it's actually a genome that we want to extract, then extract it:
-  if [[ $fasta == *.fasta ]]
+  if [[ $fasta == *.fa ]]
   then
     echo "Exporting fasta";
     # Convert a single genome from hal to fasta:
     # DNA sequences (without any alignment information) can be extracted from HAL files in FASTA format using  hal2fasta
-    singularity run --bind $PWD:/data,$PWD,/workdir/mb2337/cephalotesComparativeGenomics/individualScaffolds/ /programs/cactus-2.2.3/cactus.sif hal2fasta ./CVAR_scaf_33.hal $fasta > $fasta
+    singularity run --bind $PWD:/data,$PWD,/workdir/mb2337/cephalotesComparativeGenomics/individualScaffolds/ /programs/cactus-2.2.3/cactus.sif hal2fasta ./cactusOutput.hal $fasta > $fasta
   else
     # Otherwise just tell us that it was some other kind of information:
     echo "not a genome to export"; fi
