@@ -115,7 +115,8 @@ As input, Progressivecactus requires a file that contains:
 
 `./Scripts/alignWithProgressiveCactus` will construct this input file,
 run Progressivecactus on the genomes, and then produce an aligned FASTA
-file for each genome.
+file for each genome. For my six genomes, this took a bit under 17
+hours.
 
 If you use this script, please cite Progressivecactus and its
 dependency, hal:

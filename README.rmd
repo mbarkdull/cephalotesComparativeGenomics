@@ -71,7 +71,7 @@ As input, Progressivecactus requires a file that contains:
   1. A Newick-formatted tree of the sequences to be aligned. This tree can be generated from an existing species tree using the R script `prepForProgressiveCactus.R`.
   2. A two-column list of (a) the sequences to be aligned and (b) the paths to the files containing those sequences.
   
-`./Scripts/alignWithProgressiveCactus` will construct this input file, run Progressivecactus on the genomes, and then produce an aligned FASTA file for each genome. 
+`./Scripts/alignWithProgressiveCactus` will construct this input file, run Progressivecactus on the genomes, and then produce an aligned FASTA file for each genome. For my six genomes, this took a bit under 17 hours. 
 
 If you use this script, please cite Progressivecactus and its dependency, hal:
 
