@@ -1,0 +1,12 @@
+#!/bin/bash
+
+for alignedGenome in ./alignedGenomes/*
+do
+  export species=`echo "$alignedGenome" | awk -F'/' '{print $3}' | awk -F'_' '{print $1}'`
+  echo $species
+  # Concatenate the MAFFT files, which look like alignedGenomes/CSM3685Consensus_alignedScaffolds.fasta
+  # and the cactus files, which look like individualCactusAlignments/wholeGenomes/CSM3685Consensus_cactusAlignment.fasta
+  mkdir ./completeAlignedGenomes
+  cat "./alignedGenomes/"$species"_alignedScaffolds.fasta" >> "./completeAlignedGenomes/"$species"_completeAlignment.fasta"
+  cat "individualCactusAlignments/wholeGenomes/"$species"_cactusAlignment.fasta" >> "./completeAlignedGenomes/"$species"_completeAlignment.fasta"
+done

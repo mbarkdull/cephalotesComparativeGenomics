@@ -1,5 +1,6 @@
 #!/bin/bash
 ### Remapping the annotation file to the newly aligned genome:
+# This script can be run with the command ./Scripts/runningFlo [path to your genometools install] [path to your reference genome assembly] [path to your new, aligned genome assembly] [number of CPU cores used to parallelise flo] [minimum identity parameter used by BLAT]
 
 # Add ruby to your paths
 export PATH=/programs/ruby/bin:$PATH

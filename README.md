@@ -103,20 +103,23 @@ that we can find gene sequences based on the positions given by the
 reference genome annotation file. Because we are working with whole
 genomes that contain very large scaffolds, we will use the aligner
 [Progressivecactus](https://github.com/ComparativeGenomicsToolkit/cactus/blob/master/doc/progressive.md),
-as implemented in the script `./Scripts/alignWithProgressiveCactus`.
+as implemented in the script
+`./Scripts/alignIndividualsWithProgressiveCactus`.
 
 As input, Progressivecactus requires a file that contains:
 
 1.  A Newick-formatted tree of the sequences to be aligned. This tree
-    can be generated from an existing species tree using the R script
-    `prepForProgressiveCactus.R`.
+    can be generated from an existing species tree for each set of
+    scaffolds using the R script `prepForProgressiveCactus.R`.
 2.  A two-column list of (a) the sequences to be aligned and (b) the
     paths to the files containing those sequences.
 
-`./Scripts/alignWithProgressiveCactus` will construct this input file,
-run Progressivecactus on the genomes, and then produce an aligned FASTA
-file for each genome. For my six genomes, this took a bit under 17
-hours.
+`./Scripts/alignIndividualsWithProgressiveCactus` will construct this
+input file, run Progressivecactus on the genomes, and then produce an
+aligned FASTA file for each scaffold in each genome. For my six genomes,
+this took a bit under 17 hours. You can then recombine the individual,
+aligned scaffold fasta files into a single fasta file for each species
+using the R script `./Scripts/recombiningIndividualCactusAlignments.R`.
 
 If you use this script, please cite Progressivecactus and its
 dependency, hal:
@@ -137,6 +140,10 @@ then recombine them by genome into individual, aligned genomes. This
 process is parallelized using the excellent R package `furrr`. Note that
 if your scaffolds are large, this script will run into memory issues and
 fail.
+
+If you have aligned some scaffolds with Progressivecactus and some with
+`./Scripts/aligningScaffolds.R`, you can combine both sets of alignments
+with the script `./Scripts/combiningMAFFTandCactusAlignments`.
 
 ### Remapping the annotation file
 

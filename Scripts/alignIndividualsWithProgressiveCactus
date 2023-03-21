@@ -1,0 +1,60 @@
+#!/bin/bash
+
+# This will run Progressivecactus on just the unaligned scaffolds, by themselves.
+# To prep for this script use the R script prepForProgressiveCactus to generate trees and input fastas.
+
+# Progressivecactus requires a file that contains:
+#   1. A newick tree of the sequences to be aligned. I created this tree with the R script prepForProgressiveCactus.R
+#   2. A two-column list of the sequences to be aligned and the paths to the files containing those sequences.
+mkdir ./individualCactusAlignments
+
+for unalignedScaffold in ./unalignedScaffoldSequences/*
+do
+  # Get the scaffold number, which looks like CVAR_scaf_122
+  export scaffoldNumber=`echo "$unalignedScaffold" | awk -F'/' '{print $3}' | awk -F'.' '{print $1}'`
+
+  cactusResult="./individualCactusAlignments/"$scaffoldNumber"_cactusAlignment.hal"
+  if [ -f "$cactusResult" ]; then
+      echo "$cactusResult exists."
+  else
+      echo "$cactusResult does not exist."
+      # Create the name of the tree:
+      export tree="./individualScaffolds/"$scaffoldNumber"/"$scaffoldNumber"_tree.txt"
+      echo $tree
+      # Copy the tree into the Progressivecactus control file:
+      cp $tree cactusInput.txt
+      echo >>cactusInput.txt
+      # Copy the scaffold fasta file names and paths into the control file
+      for f in /workdir/mb2337/cephalotesComparativeGenomics/individualScaffolds/$scaffoldNumber/*.fasta; do echo -ne "$(basename $f)\t$f\n"; done >>cactusInput.txt
+
+      # Now we can run Progressivecactus on our set of scaffolds.
+      # On the Cornell BioHPC, we must run through singularity, bind the current directory ($PWD) with data files as the /data directory in the container
+      singularity run --bind $PWD:/data,$PWD,/workdir/mb2337/cephalotesComparativeGenomics/individualScaffolds/$scaffoldNumber/ /programs/cactus-2.2.3/cactus.sif cactus /data/jobStore /data/cactusInput.txt "/data/"$scaffoldNumber"_cactusAlignment.hal" --binariesMode local
+      mv $scaffoldNumber"_cactusAlignment.hal" ./individualCactusAlignments/$scaffoldNumber"_cactusAlignment.hal"
+      rm cactusInput.txt
+  fi
+
+  # Progressivecactus outputs a .hal file; we want to turn the hal output into a fasta:
+  # First, list all of the genomes in the aligment and put that into a text file:
+  singularity run --bind $PWD:/data,$PWD,/workdir/mb2337/cephalotesComparativeGenomics/individualScaffolds/ /programs/cactus-2.2.3/cactus.sif halStats "/data/individualCactusAlignments/"$scaffoldNumber"_cactusAlignment.hal" > halInfo.txt
+
+  # Now read through that text file, looping over each genome to extract it as a fasta:
+  while read -r line;
+  do
+    # This creates a variable, fasta, that stores the first column of the halInfo.txt file:
+    # Sometimes this is a genome, sometimes it's the name of an ancestral sequence that Progressivecactus inferred.
+    export fasta=`echo "$line" | awk -F',' '{print $1}'`
+    echo $fasta
+    # If it's actually a genome that we want to extract, then extract it:
+    if [[ $fasta == *.fasta ]]
+    then
+      echo "Exporting fasta";
+      # Convert a single genome from hal to fasta:
+      # DNA sequences (without any alignment information) can be extracted from HAL files in FASTA format using  hal2fasta
+      singularity run --bind $PWD:/data,$PWD,/workdir/mb2337/cephalotesComparativeGenomics/individualScaffolds/ /programs/cactus-2.2.3/cactus.sif hal2fasta "/data/individualCactusAlignments/"$scaffoldNumber"_cactusAlignment.hal" $fasta > ./individualCactusAlignments/$fasta
+    else
+      # Otherwise just tell us that it was some other kind of information:
+      echo "not a genome to export"; fi
+  done < halInfo.txt
+  rm halInfo.txt
+done
