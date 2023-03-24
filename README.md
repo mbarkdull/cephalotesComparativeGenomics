@@ -9,6 +9,11 @@ genus *Cephalotes*, assemble them to the reference *C. varians* genome,
 and then use these data to better understand the genetic basis of caste
 polymorphism.
 
+The general workflow of this project is as
+follows:
+
+<img src="README_files/figure-gfm/unnamed-chunk-1-1.png" style="display: block; margin: auto;" />
+
 ## Citing
 
 This workflow implements many different tools, all of which should be
@@ -95,7 +100,7 @@ Since we assembled our new genomes to a reference genome, genes can be
 identified quite simply using the genome annotation which accompanies
 our reference.
 
-### Aligning scaffolds
+### Aligning genomes
 
 Our genomes were assembled into scaffolds, mapped to the scaffolds of
 the reference. We now need to align the new genomes to our reference, so
@@ -158,8 +163,8 @@ To do this:
     CDS features. You can do this with the R script,
     `./Scripts/annotationFilteringToCDS.R`. The script will output the
     filtered annotation in a new directory, `./liftoverAnnotation/`.
-2.  Next, run the script `./Scripts/runningFlo`. This script does
-    several things, including:
+2.  Next, run the script `./Scripts/runningFlo` on each species. This
+    script does several things, including:
       - install flo and its dependencies.
       - create the configuration file, `flo_opts.yaml`.
       - process the filtered annotation file we just produced using

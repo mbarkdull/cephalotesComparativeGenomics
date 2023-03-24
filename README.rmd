@@ -14,6 +14,56 @@ knitr::opts_chunk$set(echo = TRUE)
 ## Introduction
 The goal of this project is to sequence five new genomes from the ant genus *Cephalotes*, assemble them to the reference *C. varians* genome, and then use these data to better understand the genetic basis of caste polymorphism. 
 
+The general workflow of this project is as follows:
+
+```{r, echo = FALSE, fig.align = 'center'}
+library(DiagrammeR)
+grViz("digraph flowchart {
+      # node definitions with substituted label text
+      node [fontname = Helvetica, shape = rectangle]        
+      tab1 [label = '@@1']
+      tab2 [label = '@@2']
+      tab3 [label = '@@3']
+      tab4 [label = '@@4']
+      tab5 [label = '@@5']
+      tab6 [label = '@@6']
+      tab7 [label = '@@7']
+      tab8 [label = '@@8']
+      tab9 [label = '@@9']
+      tab10 [label = '@@10']
+      tab11 [label = '@@11']
+      tab12 [label = '@@12']
+      tab13 [label = '@@13']
+      tab14 [label = '@@14']
+      tab15 [label = '@@15']
+      tab16 [label = '@@16']
+      
+      # edge definitions with the node IDs
+      tab1 -> tab2 -> tab3 -> tab4 -> tab5 -> tab6 -> tab7 -> tab8 -> tab9 -> tab10 -> tab11 -> tab12 -> tab16; 
+      tab10 -> tab15 -> tab16;
+      tab11 -> tab13 -> tab16;
+      tab11 -> tab14 -> tab16;
+      }
+      [1]: 'Trim raw sequence reads with Trimmomatic'
+      [2]: 'Map trimmed reads to the \\n  reference genome with NextGenMap'
+      [3]: 'Call SNPs and indels with \\n  bcftools'
+      [4]: 'Assemble consensus sequences \\n  with bcftools'
+      [5]: 'Align genome with Progressivecactus'
+      [6]: 'Remap the reference annotation \\n  with Flo'
+      [7]: 'Extract gene sequences with bedtools'
+      [8]: 'Align genes with MSA'
+      [9]: 'Translate gene sequences \\n  with Transdecoder'
+      [10]: 'Identify orthogroups with \\n  Orthofinder'
+      [11]: 'Produce codon-aware alignments \\n  with PAL2NAL'
+      [12]: 'Test for positive selection with \\n  BUSTED-PH'
+      [13]: 'Test for shifts in selection intensity \\n  with RELAX'
+      [14]: 'Assess changes in evolutionary \\n  rates with RERconverge'
+      [15]: 'Functionally annotate orthogroups \\n  with InterProScan and KinFin'
+      [16]: 'Assess GO term enrichment with TopGO'
+      
+      ")
+```
+
 ## Citing
 This workflow implements many different tools, all of which should be cited. I have noted appropriate citations throughout the text of this ReadMe. Please properly credit these researchers' hard work!
 
@@ -62,7 +112,7 @@ If you use this script, please cite:
 ## Identifying genes in each genome
 Since we assembled our new genomes to a reference genome, genes can be identified quite simply using the genome annotation which accompanies our reference. 
 
-### Aligning scaffolds
+### Aligning genomes
 Our genomes were assembled into scaffolds, mapped to the scaffolds of the reference. We now need to align the new genomes to our reference, so that we can find gene sequences based on the positions given by the reference genome annotation file. 
 Because we are working with whole genomes that contain very large scaffolds, we will use the aligner [Progressivecactus](https://github.com/ComparativeGenomicsToolkit/cactus/blob/master/doc/progressive.md), as implemented in the script `./Scripts/alignWithProgressiveCactus`. 
 
@@ -88,7 +138,7 @@ To solve this problem, we need to remap our genome annotation to the new, aligne
 To do this:
 
   1. First, we need to filter the reference annotation to include only CDS features. You can do this with the R script, `./Scripts/annotationFilteringToCDS.R`. The script will output the filtered annotation in a new directory, `./liftoverAnnotation/`.
-  2. Next, run the script `./Scripts/runningFlo`. This script does several things, including:
+  2. Next, run the script `./Scripts/runningFlo` on each species. This script does several things, including:
       + install flo and its dependencies. 
       + create the configuration file, `flo_opts.yaml`.
       + process the filtered annotation file we just produced using genometools into a format that flo will accept. 
