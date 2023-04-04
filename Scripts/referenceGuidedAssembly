@@ -32,7 +32,6 @@ do
   fi
 done < $1
 
-
 # Map the trimmed reads to the reference genome:
 inputs=$(cat $1)
 echo $inputs
@@ -50,83 +49,84 @@ do
   fi
 done
 
-#while read -r line;
-#do
-  #echo Starting nextgenmap on $line
-  # Map the trimmed reads back to the C. varians genome with NextGenMap
-  #mkdir ./nextGenMapOutputs/
-  #export nextGenMapOutputSam=mapped$line.sam
-  #export nextGenMapOutputBam=mapped$line.bam
-  #### RIGHT NOW THIS CAUSES THE SCRIPT TO QUIT OUT OF THE WHILE LOOP
-  #/programs/NextGenMap-0.4.11/bin/ngm-0.4.11/ngm  -t $2 -p -r ./CVAR/CVAR_genome_v1.0.fasta -1 $outputForwardPaired -2 $outputReversePaired -o ./nextGenMapOutputs/$nextGenMapOutputSam
-  #sleep 30
-  #echo NEXTGENMAP IS DONE on $line
-  #continue
-  #echo "I didn't go to the next iteration."
-#done < $1
-
-while read -r line;
+# Convert .sam to .bam files:
+inputs=$(cat $1)
+echo $inputs
+for line in $inputs
 do
-  # Convert .sam files to .bam files
-  export bamFile="./nextGenMapOutputs/"$nextGenMapOutputBam
+  export bamFile="./nextGenMapOutputs/mapped"$line".bam"
   if [ -s "$bamFile" ]; then
     echo "$bamFile exists."
   else
     echo "$bamFile does not exist."
-    /programs/samtools-1.9-r9/bin/samtools  view -bS -@ 10 ./nextGenMapOutputs/$nextGenMapOutputSam > ./nextGenMapOutputs/$nextGenMapOutputBam
+    /programs/samtools-1.9-r9/bin/samtools  view -bS -@ 10 ./nextGenMapOutputs/mapped$line.sam > "./nextGenMapOutputs/mapped"$line".bam"
 
-    echo Finished converting $line from .sam to .bam at `date` >> assemblyLog.txt
+    echo Finished converting $line from .sam to .bam, producing "./nextGenMapOutputs/mapped"$line".bam", at `date` >> assemblyLog.txt
   fi
+done
 
-  # Get summary statistics:
+# Get summary statistics:
+inputs=$(cat $1)
+echo $inputs
+for line in $inputs
+do
   export summaryStats=./nextGenMapOutputs/$line"summaryStats.txt"
-
   if [ -s "$summaryStats" ]; then
     echo "$summaryStats exists."
   else
     echo "$summaryStats does not exist."
-    samtools flagstat ./nextGenMapOutputs/$nextGenMapOutputBam > $summaryStats
-    echo Finished producing summary stats for $line at `date` >> assemblyLog.txt
+    samtools flagstat ./nextGenMapOutputs/mapped$line.bam > $summaryStats
+    echo Finished producing summary stats, $summaryStats, for $line at `date` >> assemblyLog.txt
   fi
+done
 
-  # Sort and index the reads:
-  export sortedBam=sorted$nextGenMapOutputBam
-  export sortedFile="./nextGenMapOutputs/"$sortedBam
+# Sort and index the reads:
+inputs=$(cat $1)
+echo $inputs
+for line in $inputs
+do
+    export sortedBam=sortedmapped$line.bam
+    export sortedFile="./nextGenMapOutputs/sortedmapped"$line.bam
+    if [ -s "$sortedFile" ]; then
+      echo "$sortedFile exists."
+    else
+      echo "$sortedFile does not exist."
+      /programs/samtools-1.9-r9/bin/samtools sort ./nextGenMapOutputs/mapped$line.bam -o ./nextGenMapOutputs/$sortedBam
+      /programs/samtools-1.9-r9/bin/samtools index ./nextGenMapOutputs/$sortedBam
+      echo Finished sorting and indexing $line at `date` >> assemblyLog.txt
+    fi
+done
 
-  if [ -s "$sortedFile" ]; then
-    echo "$sortedFile exists."
-  else
-    echo "$sortedFile does not exist."
-    /programs/samtools-1.9-r9/bin/samtools sort ./nextGenMapOutputs/$nextGenMapOutputBam -o ./nextGenMapOutputs/$sortedBam
-    /programs/samtools-1.9-r9/bin/samtools index ./nextGenMapOutputs/$sortedBam
-    echo Finished sorting and indexing $line at `date` >> assemblyLog.txt
-  fi
-
-  # Call variants with bcftools:
+# Call variants with bcftools:
+inputs=$(cat $1)
+echo $inputs
+for line in $inputs
+do
   export calledVariants=$line"CalledVariants.vcf.gz"
   export variantFile="./calledVariants/"$calledVariants
-
   if [ -s "$variantFile" ]; then
     echo "$variantFile exists."
   else
     echo "$variantFile does not exist."
-    /programs/bcftools-1.9-r9/bin/bcftools mpileup -Ou -f ./CVAR/CVAR_genome_v1.0.fasta ./nextGenMapOutputs/$sortedBam | bcftools call -mv -Ob -o ./calledVariants/$calledVariants
+    /programs/bcftools-1.9-r9/bin/bcftools mpileup -Ou -f ./CVAR/CVAR_genome_v1.0.fasta ./nextGenMapOutputs/sortedmapped$line.bam | bcftools call -mv -Ob -o ./calledVariants/$calledVariants
     bcftools index ./calledVariants/$calledVariants
     echo Finished calling variants in $line at `date` >> assemblyLog.txt
   fi
+done
 
-  # Create a consensus sequence:
+# Create a consensus sequence with bcftools:
+inputs=$(cat $1)
+echo $inputs
+for line in $inputs
+do
   export consensus=./consensusSequences/$line"Consensus.fa"
-
   if [ -s "$consensus" ]; then
     echo "$consensus exists."
   else
     echo "$consensus does not exist."
-    cat ./CVAR/CVAR_genome_v1.0.fasta | bcftools consensus ./calledVariants/$calledVariants > $consensus
+    cat ./CVAR/CVAR_genome_v1.0.fasta | bcftools consensus ./calledVariants/$line"CalledVariants.vcf.gz" > $consensus
     echo Finished creating consensus sequence for $line at `date` >> assemblyLog.txt
   fi
-
   echo __________________ Done with $line _________________
   echo Finished genome assembly at `date` >> assemblyLog.txt
-
-done < $1
+done
