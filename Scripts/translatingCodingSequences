@@ -4,29 +4,43 @@
 # The command to run this is `./DataTransdecoder <list of sample names>`.
 # For some reason, TransDecoder seems to need R, so make sure you have an up-to-date version available:
 module load R/4.2.1-r9
+# Make the output directories
+mkdir ./translatedData
+mkdir ./translatedData/finalPeptideSequences
 
-  while read -r line;
-  do
-    # Get the name of the coding sequence file produced by extractCDSwithGFF:
-    export nucleotideSequenceFile=$line"_cds.fasta"
+# Read through the samples and translate them:
+while read -r line;
+do
+  # Get the name of the coding sequence file produced by extractCDSwithGFF:
+  export nucleotideSequenceFile=$line"_genesAlignedToReference.fasta"
 
-    echo "Translating the nucleotide sequences in $nucleotideSequenceFile"
+  echo "Translating the nucleotide sequences in $nucleotideSequenceFile"
 
-    # Now we can make a directory for translating the inputs and copy the cds files there:
-    mkdir ./translatedData
-    cd ./translatedData
-    pwd
-    cp ../codingSequences/$nucleotideSequenceFile ./$nucleotideSequenceFile
+  # Now copy the cds files to the directory for TransDecoder:
+  cd ./translatedData
+  pwd
+  cp ../$nucleotideSequenceFile ./$nucleotideSequenceFile
 
-    # Now we can run Transdecoder on the cleaned file:
-    echo "First, attempting TransDecoder run on $nucleotideSequenceFile"
-    /programs/TransDecoder-v5.5.0/TransDecoder.LongOrfs -t $nucleotideSequenceFile
-    /programs/TransDecoder-v5.5.0/TransDecoder.Predict -t $nucleotideSequenceFile --single_best_only
+  # First, replace gap characters that were inserted by the alignment step, Xs, Ys, with Ns:
+  sed -i '/^>/! s/-/N/g' ./$nucleotideSequenceFile
+  sed -i '/^>/! s/X/N/g' ./$nucleotideSequenceFile
+  # The Y doesn't seem to get taken out?
+  sed -i '/^>/! s/Y/N/g' ./$nucleotideSequenceFile
+  sed -i '/^>/! s/R/N/g' ./$nucleotideSequenceFile
+  sed -i '/^>/! s/M/N/g' ./$nucleotideSequenceFile
+  sed -i '/^>/! s/W/N/g' ./$nucleotideSequenceFile
+  sed -i '/^>/! s/S/N/g' ./$nucleotideSequenceFile
+  sed -i '/^>/! s/K/N/g' ./$nucleotideSequenceFile
+  sed -i '/^>/! s/V/N/g' ./$nucleotideSequenceFile
+  sed -i '/^>/! s/H/N/g' ./$nucleotideSequenceFile
+  sed -i '/^>/! s/D/N/g' ./$nucleotideSequenceFile
+  sed -i '/^>/! s/B/N/g' ./$nucleotideSequenceFile
 
-    # Copy the output to a clearer name:
-    export transdecoderFile=$line"_cds.fasta.transdecoder.pep"
-    mkdir ./outputFiles/
-    cp $transdecoderFile ./outputFiles/translated_$line.fasta
+  # Now we can run Transdecoder on the cleaned file:
+  echo "First, attempting TransDecoder run on $nucleotideSequenceFile"
+  /programs/TransDecoder-v5.5.0/TransDecoder.LongOrfs -t $nucleotideSequenceFile
+  /programs/TransDecoder-v5.5.0/TransDecoder.Predict -t $nucleotideSequenceFile --single_best_only --no_refine_starts
 
-    cd ../
-  done < $1
+  cd ../
+
+done < $1
