@@ -15,13 +15,21 @@ export PATH=/workdir/$USER/FormicidaeMolecularEvolution/OrthoFinder/orthofinder:
 source /programs/miniconda3/bin/activate orthofinder-2.5.4
 
 # Copy the translated gene files from translatingCodingSequences to the OrthoFinder directory:
-cp ./translatedData/outputFiles/translated* ./orthoFinder/fasta
+
+for peptideFile in ./translatedData/finalPeptideSequences/*.pep
+do
+  echo "Moving and renaming" $peptideFile "file."
+  export speciesCodeJunk=`echo "$peptideFile" | awk -F'_' '{print $1}'`
+  export speciesCode=`echo "$speciesCodeJunk" | awk -F'/' '{print $4}'`
+  echo $speciesCode
+  cp $peptideFile ./orthoFinder/fasta/translated_$speciesCode".fasta"
+done
 
 # Run Orthofinder:
-# -S sets the sequence search program; here we will use Diamond
-# -t sets the number of threads to use for parallelizable steps; here it is set on the command line.
-# -f starts the analysis from your directory of fasta files.
-# -M uses MSA to infer trees
-# -p specifies a directory for temp files.
-# -s will use a user-specified species tree.
+    # -S sets the sequence search program; here we will use Diamond
+    # -t sets the number of threads to use for parallelizable steps; here it is set on the command line.
+    # -f starts the analysis from your directory of fasta files.
+    # -M uses MSA to infer trees
+    # -p specifies a directory for temp files.
+    # -s will use a user-specified species tree, here set on the command line.
 orthofinder -S diamond -t $1 -f ./orthoFinder/fasta -M msa -p /workdir/tmp -s $2
