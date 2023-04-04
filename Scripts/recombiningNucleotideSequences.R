@@ -2,75 +2,74 @@
 
 args <- commandArgs(trailingOnly=TRUE)
 if (length(args)==0) {
-  stop("At least one argument must be supplied (input file).n", call.=FALSE)
+  stop("At least one argument must be supplied (path to orthoFinder orthogroup sequences).n", call.=FALSE)
 } else if (length(args)==1) {
   # default output file
-  args[1] = "/workdir/mb2337/FormicidaeMolecularEvolution/5_OrthoFinder/fasta/OrthoFinder/Results*/MultipleSequenceAlignments/"
+  args[1] = "./orthoFinder/fasta/OrthoFinder/Results_Mar28_1/Orthogroup_Sequences/"
 }
 
-# The command to run this script is `Rscript ./scripts/DataSubsetCDS.R ./scripts/inputurls_partial [path to Orthofinder MSA files]`, for example: `Rscript ./scripts/DataSubsetCDS.R ./scripts/inputurls_partial ./4_OrthoFinder/fasta/OrthoFinder/Results_Nov12/MultipleSequenceAlignments/`
+# The command to run this script is `Rscript ./scripts/DataSubsetCDS.R [path to Orthofinder orthogroup sequence files]`, for example: `Rscript ./scripts/DataSubsetCDS.R ./4_OrthoFinder/fasta/OrthoFinder/Results_Nov12/MultipleSequenceAlignments/`
+# Get the list of species abbreviations by reading the fasta files in the Orthofinder input directory:
+abbreviations <- list.files(path = "./orthoFinder/fasta/") %>%
+  str_split_i(pattern = "_", 
+              i = 2) %>%
+  str_split_i(pattern = "\\.",
+              i = 1) %>%
+  na.omit()
 
-# I need to break up nucleotide sequence files into many small files, like the orthogroup MSA files. 
+# Make a directory for this step:
+dir.create("./cdsOrthogroups")
 
-library(phylotools)
-library(plyr)
-library(tidyverse)
-
-# Read in the abbreviation data:
-speciesInfo <- read.table(file = args[1], sep = ",")
-#speciesInfo <- read.table(file = "./scripts/inputurls_full.txt", sep = ",")
-# Get a vector of abbreviations:
-abbreviations <- speciesInfo$V4
-
-# Make a working directory:
-dir.create("./8_1_CDSOrthogroups")
-# Copy the filtered nucleotide sequences to the working directory:
-file.copy("./7_PAL2NALOutput/", "./8_1_CDSOrthogroups", recursive = TRUE)
-# Copy the multiple sequence alignments to the directory:
-file.copy(args[2], "./8_1_CDSOrthogroups", recursive = TRUE)
-#file.copy("/Users/meganbarkdull/Projects/FormicidaeMolecularEvolution/MultipleSequenceAlignments/", "./8_1_CDSOrthogroups", recursive = TRUE)
-setwd("./8_1_CDSOrthogroups/7_PAL2NALOutput")
-
-# Concatenate all of the cds files into a single file:
-cdsFiles <- list.files(pattern = "*.fasta")
-allCDSFiles <- bind_rows(lapply(cdsFiles, read.fasta))
-
-# Fix the prefixes of the genes names in the coding sequences:
+# Copy the nucleotide sequences from TransDecoder to the directory:
 for (i in abbreviations) {
-  print(i)
-  currentPrefix <- (paste(i, "_", sep = ""))
-  print(currentPrefix)
-  newPrefix <- (paste(i, "_filteredTranscripts_", i, "_", sep = ""))
-  print (newPrefix)
-  allCDSFiles$seq.name <- gsub(currentPrefix, newPrefix, allCDSFiles$seq.name)
+  alignedNucleotidesFile <- paste("./translatedData/",
+                                  i,
+                                  "_genesAlignedToReference.fasta.transdecoder.cds",
+                                  sep = "")
+  file.copy(alignedNucleotidesFile, "./cdsOrthogroups", recursive = TRUE)
 }
 
-setwd("../")
+# Read in all of the aligned nucleotide sequences
+# Concatenate all of the cds files into a single file:
+cdsFiles <- list.files(path = "./cdsOrthogroups",
+                       pattern = "*.cds",
+                       full.names = TRUE)
+allCDSFiles <- bind_rows(lapply(cdsFiles, read.fasta))
+allCDSFiles$seq.name <- str_split_i(allCDSFiles$seq.name,
+                                    pattern = " ",
+                                    i = 1)
 
-cdsSubsetting <- function(orthogroup, outfile){
-  # Then check if the gene names in an MSA file are in the CDS file. 
-  OrthogroupSequences <- read.fasta(orthogroup)
-  allCDSFiles$OrthogroupMatch <- allCDSFiles$seq.name %in% OrthogroupSequences$seq.name
-  # If they are, subset the cds sequences to a new file. 
-  CDSOrthogroup <- subset(allCDSFiles, OrthogroupMatch == "TRUE", select = c("seq.name", "seq.text"))
-  dat2fasta(CDSOrthogroup, outfile = outfile)
+# Copy the orthogroup amino acid sequences to the directory:
+file.copy(args[1], "./cdsOrthogroups", recursive = TRUE)
+#file.copy("./orthoFinder/fasta/OrthoFinder/Results_Mar28_1/Orthogroup_Sequences/", "./cdsOrthogroups", recursive = TRUE)
+
+# List all of the amino acid sequence files:
+allAAfiles <- list.files("./cdsOrthogroups/Orthogroup_Sequences",
+                         full.names = TRUE)
+
+# Write a function to select the nucleotide sequences for a single orthogroup:
+extractSingleOrthogroupCDS <- function(i) {
+  # Read in an orthogroup:
+  orthogroup <- read.fasta(file = i)
+  # Get the orthogroup number from the filename:
+  orthogroupNumber <- str_split_i(i, 
+                                  pattern = "/",
+                                  i = 4) %>%
+    str_split_i(pattern = "\\.",
+                i = 1)
+  # Extract out the nucleotide sequences for the orthogroup 
+  allCDSFiles$orthogroupMatch <- allCDSFiles$seq.name %in% orthogroup$seq.name
+  orthogroupCDSSequences <- filter(allCDSFiles, 
+                                   orthogroupMatch == "TRUE") %>%
+    select(-c("orthogroupMatch"))
+  # Export as a fasta file
+  phylotools::dat2fasta(orthogroupCDSSequences,
+                        outfile = paste("./cdsOrthogroups/",
+                                        orthogroupNumber,
+                                        "_cdsSequences.fasta",
+                                        sep = ""))
 }
 
-# Make a directory for output:
-dir.create("./MultipleSequenceAlignments/Output")
-
-# Now run this function over all orthogroups with a for loop. 
-# Construct a list of all orthogroup files:
-OrthogroupList <- list.files(path = "./MultipleSequenceAlignments", pattern = "*.fa", full.names = TRUE)
-for (i in OrthogroupList) {
-  print(i)
-  orthogroup <- i
-  # Split up the value of i so it's just the orthogroup name, not with .fa 
-  orthogoupName <- sapply(strsplit(i, "\\."), `[`, 2)
-  print(orthogoupName)
-  orthogoupName <- sapply(strsplit(orthogoupName, "\\/"), `[`, 3)
-  print(orthogoupName)
-  outfile <- (paste("./MultipleSequenceAlignments/Output/", orthogoupName, "_cds.fasta", sep = ""))
-  print(outfile)
-  cdsSubsetting(orthogroup = orthogroup, outfile = outfile)
-}
+# Do this for all the orthogroups. 
+purrr::map(allAAfiles,
+           extractSingleOrthogroupCDS)
