@@ -1,33 +1,33 @@
-
 #!/bin/bash
 
+# Run with the command removingStopCodons [path to aligned nucleotide orthogroups, like ./cdsOrthogroups]
 # Export required paths:
 export LD_LIBRARY_PATH=/usr/local/gcc-7.3.0/lib64:/usr/local/gcc-7.3.0/lib
 
 # Make a directory for BUSTED[S] outputs:
-mkdir ./8_2_RemovedStops
+mkdir ./removedStops
 
 # Download the newest version of HyPhy:
 export PATH=/home/$USER/miniconda3/bin:$PATH
-conda install -c bioconda hyphy
+#conda install -c bioconda hyphy
 
 # For all of the aligned, nucleotide orthogroup files in ./8_1_CDSOrthogroups, go through and mask terminal stop codons.
-for f in 8_1_CDSOrthogroups/MultipleSequenceAlignments/Output/*
+for f in $1/*.fasta
 do
-  #echo $f
-  export orthogroup=`echo "$f" | awk -F'/' '{print ($4)}' | awk -F'.' '{print ($1)}'`
+  echo $f
+  export orthogroup=`echo "$f" | awk -F'/' '{print ($3)}' | awk -F'.' '{print ($1)}'`
   echo $orthogroup
-  # This looks like: OG0000711_cds
+  # This looks like: OG0000711_cdsSequences
   export cleanedFile="cleaned_"$orthogroup".fasta"
-  #echo __________________________________________________
-  (echo 1; echo "./"$f; echo 1; echo ./8_2_RemovedStops/$cleanedFile) | /programs/hyphy-2.5.15/bin/hyphy /programs/hyphy-2.5.15/share/hyphy/TemplateBatchFiles/CleanStopCodons.bf
-  #echo __________________________________________________
+  echo __________________________________________________
+  (echo 1; echo "./"$f; echo 1; echo ./removedStops/$cleanedFile) | hyphy /programs/hyphy-2.5.49/share/hyphy/TemplateBatchFiles/CleanStopCodons.bf
+  echo __________________________________________________
   FILE=/etc/resolv.conf
-  if [ -f "./8_2_RemovedStops/$cleanedFile" ]; then
-      echo ./8_2_RemovedStops/"$cleanedFile exists."
+  if [ -f "./removedStops/$cleanedFile" ]; then
+      echo ./removedStops/"$cleanedFile exists."
   else
-      echo ./8_2_RemovedStops/"$cleanedFile does not exist."
-      echo ./8_2_RemovedStops/$cleanedFile >> missing.txt
-      cp $f ./8_2_RemovedStops/$cleanedFile
+      echo ./removedStops/"$cleanedFile does not exist."
+      echo ./removedStops/$cleanedFile >> missing.txt
+      cp $f ./removedStops/$cleanedFile
   fi
 done
