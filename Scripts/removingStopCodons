@@ -31,3 +31,6 @@ do
       cp $f ./removedStops/$cleanedFile
   fi
 done
+
+# Play a sound when the script finishes:
+echo $'\a' $'\a'
