@@ -1,0 +1,25 @@
+#!/bin/bash
+
+# Run with the command removingStopCodons [path to aligned nucleotide orthogroups, like ./cdsOrthogroups]
+# Export required paths:
+export LD_LIBRARY_PATH=/usr/local/gcc-7.3.0/lib64:/usr/local/gcc-7.3.0/lib
+
+# Make a directory for BUSTED[S] outputs:
+mkdir ./labelledPhylogenies
+
+# Download the newest version of HyPhy:
+export PATH=/home/$USER/miniconda3/bin:$PATH
+#conda install -c bioconda hyphy
+
+# For all of the gene trees in orthoFinder/fasta/OrthoFinder/Results_Mar28_1/Resolved_Gene_Trees/, go through and label foreground species.
+for f in $1/cleaned_*.txt
+do
+  echo $f
+  export orthogroup=`echo "$f" | awk -F'/' '{print ($6)}' | awk -F'_' '{print ($2)}'`
+  echo $orthogroup
+  hyphy hyphy-analyses/LabelTrees/label-tree.bf --tree $f  --list $2 --output ./labelledPhylogenies/labelled_$orthogroup"_tree.txt" --internal-nodes "Parsimony"
+done
+
+
+# Play a sound when the script finishes:
+echo $'\a' $'\a'
