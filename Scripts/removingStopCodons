@@ -11,7 +11,7 @@ mkdir ./removedStops
 export PATH=/home/$USER/miniconda3/bin:$PATH
 #conda install -c bioconda hyphy
 
-# For all of the aligned, nucleotide orthogroup files in ./8_1_CDSOrthogroups, go through and mask terminal stop codons.
+# For all of the aligned, nucleotide orthogroup files in ./cdsOrthogroups, go through and mask terminal stop codons.
 for f in $1/*.fasta
 do
   echo $f
@@ -31,6 +31,7 @@ do
       cp $f ./removedStops/$cleanedFile
   fi
 done
+
 
 # Play a sound when the script finishes:
 echo $'\a' $'\a'
