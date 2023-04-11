@@ -1,0 +1,49 @@
+#!/bin/bash
+
+# Inferring gene trees for orthogroups with fewer than four sequences, since OrthoFinder doesn't automatically do this
+
+mkdir ./inferredTrees/
+mkdir ./MAFFToutput
+
+# List all orthogroups
+ls -hSr orthoFinder/fasta/OrthoFinder/Results_Mar28_1/Orthogroup_Sequences > orthogroupsList.txt
+
+while read -r line;
+do
+  # See if there's a gene tree for that orthogroup
+  # Get the orthogroup number:
+  export orthogroupNumber=`echo "$line" | awk -F'.' '{print ($1)}'`
+  echo $orthogroupNumber
+  # Get the gene tree name that might exist, a la 5_OrthoFinder/fasta/OrthoFinder/Results_Jul13/Resolved_Gene_Trees/OG0007261_tree.txt
+  export treeFile="./orthoFinder/fasta/OrthoFinder/Results_Mar28_1/Resolved_Gene_Trees/"$orthogroupNumber"_tree.txt"
+  if [ -f "$treeFile" ]; then
+    echo "tree exists."
+  # If not, run MAFFT and then run FastTree on it
+  else
+    # Check how many sequences are in the orthogroup, and skip if it's just one:
+    export sequenceNumber=`cat "./orthoFinder/fasta/OrthoFinder/Results_Mar28_1/Orthogroup_Sequences/"$orthogroupNumber".fa" | grep \> | wc -l`
+    echo __________________
+    echo $sequenceNumber
+    echo __________________
+    if [ $sequenceNumber == 1 ]; then
+      echo "only one sequence"
+    else
+      echo "$treeFile does not exist; inferring now"
+      echo $'\a'
+      /programs/mafft/bin/mafft --localpair --maxiterate 1000 --anysymbol "./orthoFinder/fasta/OrthoFinder/Results_Mar28_1/Orthogroup_Sequences/"$orthogroupNumber".fa" > "./MAFFToutput"/$orthogroupNumber".fa"
+      if [ -f "./MAFFToutput"/$orthogroupNumber".fa" ]; then
+        /programs/FastTree-2.1.10/FastTree "./MAFFToutput"/$orthogroupNumber".fa" > "./inferredTrees/"$orthogroupNumber"_tree.txt"
+      fi
+      #while read -r line;
+      #do
+
+      #done < "./MAFFToutput"/$orthogroupNumber".fa"
+      #/programs/FastTree-2.1.10/FastTree "./MAFFToutput"/$orthogroupNumber".fa" > "./inferredTrees/"$orthogroupNumber"_tree.txt"
+    fi
+  fi
+done < orthogroupsList.txt
+
+# Copy all of the gene trees- those inferred by OrthoFinder and those we inferred with MAFFT, into a single folder:
+mkdir ./allGeneTrees
+cp -r ./inferredTrees/. ./allGeneTrees
+cp -r ./orthoFinder/fasta/OrthoFinder/Results_Mar28_1/Resolved_Gene_Trees/. ./allGeneTrees
