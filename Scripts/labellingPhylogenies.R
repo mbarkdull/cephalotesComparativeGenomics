@@ -22,6 +22,10 @@ labellingTrees <- function(i) {
                           i = 3)
   # Read in a single tree and get the tip labels of that tree:
   tree <- ape::read.tree(file = i)
+  tree[["tip.label"]] <- gsub(pattern = "\\.", replacement = "_", tree[["tip.label"]])
+  write.tree(tree,
+             file = i)
+  tree <- ape::read.tree(file = i)
   tips <- as.data.frame(tree[["tip.label"]])
   tips 
   
