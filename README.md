@@ -259,9 +259,29 @@ If you use the species tree in your work then please also cite:
   - Emms D.M. & Kelly S. (2018), bioRxiv
     <https://doi.org/10.1101/267914>
 
-### Assessing positive selection with BUSTED-PH
+### Inferring gene trees
 
-### Assessing shifts in selection intensity with RELAX
+Orthofinder will automatically infer gene trees for any orthogroup with
+at least four sequences; however, we may want to analyze smaller
+orthogroups too. You can do this by running the script
+`./Scripts/treesForSmallOrthogroups`. This script does not take any
+arguments; however, you’ll need to edit the path to the Orthofinder
+results to match your setup.
+
+### Evolutionary analyses in Hyphy
+
+#### Prepping data for Hyphy
+
+The Hyphy analyses will need labelled gene trees for each orthogroup,
+with the tips (and internal nodes, if appropriate) that possess your
+focal trait labelled as being the foreground. You can produce these
+labelled trees using the R script `./Scripts/labellingPhylogenies.R`,
+which runs a built-in Hyphy utility to label trees across all of the
+trees in the directory `./allGeneTrees/`.
+
+#### Assessing positive selection with BUSTED-PH
+
+#### Assessing shifts in selection intensity with RELAX
 
 ### Exploring evolution in non-coding elements
 
