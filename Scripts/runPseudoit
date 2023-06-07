@@ -1,0 +1,74 @@
+#!/bin/bash
+
+# This script takes raw sequencing reads and aligns them with pseudo-it (See https://github.com/goodest-goodlab/pseudo-it)
+# Take command line options:
+  # $1 should be the path to the reference genome
+  # $2 should be the path to the data download folder from Novogene, which contains one folder per sample with each of the paired-end reads.
+
+mkdir pseudo-it
+cd pseudo-it
+
+# Install pseudo-it with conda:
+if conda env list | grep ".*pseudo-it-env.*"
+then
+  echo Pseudo-it is installed.
+  conda activate pseudo-it-env
+
+  # We need to pre-index reference genome with samtools:
+  samtools faidx $1
+  # Reference the file with BWA:
+  bwa index $1
+  # Create a sequence dictionary with Picard (must be the same filename as the reference fasta but with .dict instead of .fasta):
+  picard CreateSequenceDictionary R=$1 O=$1".dict"
+
+  # List directories in the download folder from Novogene, in the form "/tmp/dirname/"
+  for directory in $2/*/
+  do
+    # Remove the trailing "/"
+    export directory=${directory%*/}
+    # Extract the species code by printing everything after the final "/"
+    export sampleCode="${directory##*/}"
+    # Get the name of the first input file
+    export inputOne=`ls $directory | egrep '\_1.fq.gz$'`
+    echo $2/$sampleCode/$inputOne
+    # Get the name of the second input file
+    export inputTwo=`ls $directory | egrep '\_2.fq.gz$'`
+    echo $2/$sampleCode/$inputTwo
+
+    # Assemble the new genome:
+    python pseudo_it.py -ref $1 -pe1 $2/$sampleCode/$inputOne -pe2 $2/$sampleCode/$inputTwo -i 4 -p 60 -o ./aligned$sampleCode
+  done
+
+else
+  echo Installing pseudo-it.
+  conda create -n pseudo-it-env
+  conda activate pseudo-it-env
+  conda install pseudo-it
+
+  # We need to pre-index reference genome with samtools:
+  samtools faidx $1
+  # Reference the file with BWA:
+  bwa index $1
+  # Create a sequence dictionary with Picard (must be the same filename as the reference fasta but with .dict instead of .fasta):
+  picard CreateSequenceDictionary R=$1 O=$1".dict"
+
+  # List directories in the download folder from Novogene, in the form "/tmp/dirname/"
+  for directory in $2/*/
+  do
+    # Remove the trailing "/"
+    export directory=${directory%*/}
+    # Extract the species code by printing everything after the final "/"
+    export sampleCode="${directory##*/}"
+    # Get the name of the first input file
+    export inputOne=`ls $directory | egrep '\_1.fq.gz$'`
+    echo $2/$sampleCode/$inputOne
+    # Get the name of the second input file
+    export inputTwo=`ls $directory | egrep '\_2.fq.gz$'`
+    echo $2/$sampleCode/$inputTwo
+
+    # Assemble the new genome:
+    python pseudo_it.py -ref $1 -pe1 $2/$sampleCode/$inputOne -pe2 $2/$sampleCode/$inputTwo -i 4 -p 60 -o ./aligned$sampleCode
+  done
+fi
+
+cd ../
