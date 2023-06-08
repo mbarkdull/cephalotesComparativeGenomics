@@ -118,7 +118,10 @@ checkNewAlignments <- function(i) {
   
   # Plot the distribution of similarity values:
   ggplot(data = similarityValues) + 
-    geom_histogram(mapping = aes(x = as.numeric(V2)))
+    geom_histogram(mapping = aes(x = as.numeric(V2))) +
+    ggtitle(paste("Alignments between reference and ",
+                  i,
+                  sep = ""))
 }
 
 possiblycheckNewAlignments <- possibly(checkNewAlignments,
