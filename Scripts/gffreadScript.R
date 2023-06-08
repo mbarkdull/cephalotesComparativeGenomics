@@ -8,7 +8,7 @@ library(spgs)
 # Here, we will do that with UCSC's liftOver tool.
 
 # Create an output directory:
-dir.create("./annotationsAndExons/")
+dir.create("./02_annotationsAndExons/")
 
 # List all the samples we need to iterate over:
 sampleList <- list.files(path = "./pseudo-it/",
