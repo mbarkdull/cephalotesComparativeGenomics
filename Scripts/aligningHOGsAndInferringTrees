@@ -1,0 +1,38 @@
+#!/bin/bash
+
+# Script to align HOGs from Orthofinder and infer gene trees:
+# $1 should be the path to the HOG files
+
+# Make output directories:
+mkdir ./04_alignedHOGs
+mkdir ./05_HOGTrees/
+
+# List all of the N1 HOGs to be processed:
+ls -hSr $1 > orthogroupsList.txt
+
+# Split that list into a user-specified number of chunks:
+export chunkNumber="l/"$2
+split --number=$chunkNumber --additional-suffix=.txt -d orthogroupsList.txt "orthogroupsToAlign"
+# Remove any chunks that are empty:
+find . -name 'orthogroupsToAlign*' -type f -empty -delete
+# Create a file listing those chunks:
+ls "orthogroupsToAlign"* > chunksOfOrthogroupsToAlign.txt
+
+# Run individual processes for each chunk:
+export batchSize=$2
+  export currentBatch=0
+  export batchFileNames=()
+  # Then, while reading each line in our list of chunked files,
+  while read -r line;
+  do
+    export batchFile=$line
+    batchFileNames+=($batchFile)
+    if [ ${#batchFileNames[@]} -eq $batchSize ]; then
+      for batchFile in ${batchFileNames[@]} ; do
+        #sleep 10 &
+        ./Scripts/singleAlignmentAndTree $batchFile $1 &
+      done
+      wait
+      batchFileNames=()
+    fi
+  done < chunksOfOrthogroupsToAlign.txt

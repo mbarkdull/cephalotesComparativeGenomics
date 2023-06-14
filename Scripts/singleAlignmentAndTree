@@ -1,0 +1,19 @@
+#!/bin/bash
+
+# In this file:           #In aligningHOGsAndInferringTrees
+#   $1                        the chunked file listing HOGs
+#   $2                        $1, the path to the HOGs
+
+
+while read -r line;
+do
+  export hogFile=$line
+  export pathToHOGs=$2
+
+  export orthogroupNumber=`echo "$hogFile" | awk -F'.' '{print ($2)}'`
+  echo $orthogroupNumber
+
+  /programs/mafft/bin/mafft --localpair --maxiterate 1000 --anysymbol $2$line > "./04_alignedHOGs"/$orthogroupNumber".fa"
+  /programs/FastTree-2.1.10/FastTree "./04_alignedHOGs"/$orthogroupNumber".fa" > "./05_HOGTrees/"$orthogroupNumber"_tree.txt"
+
+done < $1
