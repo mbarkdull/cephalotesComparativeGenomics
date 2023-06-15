@@ -19,18 +19,18 @@ sampleList <- list.files(path = "./pseudo-it/",
 
 # Write a function to create output directories, lift over annotations, and extract transcripts:
 liftOverAndExtract <- function(i) {
-  dir.create(paste("./annotationsAndExons/",
+  dir.create(paste("./02_annotationsAndExons/",
                    i,
                    sep = ""))
   
   # Run liftOver to create the new annotation file:
   liftOverCommand <- paste("~/miniconda3/bin/liftOver -gff ./CVAR/CVAR_OGS_v1.0.gff3 ./pseudo-it/aligned",
                            i,
-                           "/iter-04/fa/iter-04-softmask-final.chain ./annotationsAndExons/",
+                           "/iter-04/fa/iter-04-softmask-final.chain ./02_annotationsAndExons/",
                            i,
                            "/",
                            i,
-                           "annotation.gff3 ./annotationsAndExons/",
+                           "annotation.gff3 ./02_annotationsAndExons/",
                            i,
                            "/",
                            i,
@@ -40,13 +40,13 @@ liftOverAndExtract <- function(i) {
   system(liftOverCommand)
   
   # Now use that new annotation to extract transcript sequences:
-  gffreadCommand <- paste("/programs/gffread-0.9.12/gffread/gffread -w ./annotationsAndExons/",
+  gffreadCommand <- paste("/programs/gffread-0.9.12/gffread/gffread -w ./02_annotationsAndExons/",
                           i,
                           "/", 
                           i,
                           "_transcripts.fasta -g ./pseudo-it/aligned",
                           i, 
-                          "/iter-04/fa/iter-04-softmask-final.fa ./annotationsAndExons/",
+                          "/iter-04/fa/iter-04-softmask-final.fa ./02_annotationsAndExons/",
                           i,
                           "/",
                           i,
@@ -62,7 +62,7 @@ purrr::map(sampleList,
 
 # Now we can read those transcripts in and see how they align to the CVAR genome:
 checkNewAlignments <- function(i) {
-  newlyGeneratedTranscriptSequences <- phylotools::read.fasta(paste("./annotationsAndExons/",
+  newlyGeneratedTranscriptSequences <- phylotools::read.fasta(paste("./02_annotationsAndExons/",
                                                                     i,
                                                                     "/",
                                                                     i,

@@ -1,0 +1,21 @@
+#!/bin/bash
+
+# The command to run this is `./scripts/DataRunPAL2NAL`
+for orthofinderInputFasta in ./orthoFinder/fasta/*.fasta
+do
+  export speciesCodeJunk=`echo "$orthofinderInputFasta" | awk -F'_' '{print $2}'`
+  export speciesCode=`echo "$speciesCodeJunk" | awk -F[.] '{print $1}'`
+  echo $speciesCode
+
+  export alnFile=./PAL2NALInput/proteins_"$speciesCode".fasta
+  export nucFile="./filteredCDS/filtered_"$speciesCode"_cds.fasta"
+  export output=alignedCDS_$speciesCode".fasta"
+
+  echo Running PAL2NAL on $alnFile and $nucFile
+  #./Scripts/pal2nal.v14/pal2nal.pl  ./PAL2NALInput/proteins_POW0123.fasta  ./filteredCDS/filtered_POW0123_cds.fasta  -nogap -nomismatch -output fasta > testPAL2NAL.fasta
+  ./Scripts/pal2nal.v14/pal2nal.pl  $alnFile  $nucFile  -output fasta > $output
+
+  mkdir ./PAL2NALOutput
+  mv $output ./PAL2NALOutput/$output
+
+done

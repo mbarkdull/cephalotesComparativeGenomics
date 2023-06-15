@@ -1,0 +1,27 @@
+#!/bin/bash
+
+# Uses the HYPHY utility to label all of our trees.
+# Options are:
+  # $1: path to the list of taxa to label
+  # $2: which internal nodes to label. For my project, should be None
+# Export required paths:
+export LD_LIBRARY_PATH=/usr/local/gcc-7.3.0/lib64:/usr/local/gcc-7.3.0/lib
+
+# Make a directory for labelled trees:
+mkdir ./06_labelledPhylogenies
+
+# Download the newest version of HyPhy:
+export PATH=/home/$USER/miniconda3/bin:$PATH
+#conda install -c bioconda hyphy
+
+# For all of the gene trees in orthoFinder/fasta/OrthoFinder/Results_Mar28_1/Resolved_Gene_Trees/, go through and label foreground species.
+for f in ./05_HOGTrees/*_tree.txt
+do
+  export orthogroup=`echo "$f" | awk -F'/' '{print ($3)}' | awk -F'_' '{print ($1)}'`
+  echo $orthogroup
+  hyphy hyphy-analyses/LabelTrees/label-tree.bf --tree $f  --list $1 --output ./06_labelledPhylogenies/labelled_$orthogroup"_tree.txt" --internal-nodes $2
+done
+
+
+# Play a sound when the script finishes:
+echo $'\a' $'\a'

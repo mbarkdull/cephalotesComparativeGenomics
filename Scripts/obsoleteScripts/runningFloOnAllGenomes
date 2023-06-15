@@ -1,15 +1,17 @@
 #!/bin/bash
 
-for completeAlignedGenome in ./completeAlignedGenomes/*.fasta
+for completeAlignedGenome in ./alignedGenomesCactus/*.fa
 do
   # Get the name of the new, aligned genome we're lifting over to:
   export file=`echo "$completeAlignedGenome" | awk -F'/' '{print $3}'`
+  echo File is $file
   # Get just the species code, for when we move the output files:
-  export species=`echo "$file" | awk -F'_' '{print $1}'`
+  export species=`echo "$file" | awk -F'Con' '{print $1}'`
+  echo Species is $species
   # Pre-process the annotation file:
   Rscript ./Scripts/annotationFilteringToCDS.R
   # Run Flo on the new genome:
-  ./Scripts/runningFlo /programs/genometools-1.5.9/bin/ /local/workdir/mb2337/cephalotesComparativeGenomics/CVAR/CVAR_genome_v1.0.fasta /workdir/mb2337/cephalotesComparativeGenomics/completeAlignedGenomes/$file 40 95
+  ./Scripts/runningFlo /programs/genometools-1.5.9/bin/ /local/workdir/mb2337/cephalotesComparativeGenomics/CVAR/CVAR_genome_v1.0.fasta /workdir/mb2337/cephalotesComparativeGenomics/alignedGenomesCactus/$file 40 95
   # Move the Flo output to a species-specific directory:
   mv ./liftoverAnnotation ./liftoverAnnotation_$species
 done
