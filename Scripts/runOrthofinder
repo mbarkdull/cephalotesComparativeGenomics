@@ -14,17 +14,17 @@ do
   export sampleCode="${directory##*/}"
   echo This is the sample code: $sampleCode
   # Copy the transcript file into the orthofinder directory:
-  cp $directory"/"$sampleCode"_transcripts.fasta" ./03_OrthoFinder/fasta/
+  cp $directory"/"$sampleCode"_cds.fasta" ./03_OrthoFinder/fasta/
   # Append a species code to each gene name:
   export samplePrefix=$sampleCode"_"
-  sed -i "s/>/>$samplePrefix/g" "./03_OrthoFinder/fasta/"$sampleCode"_transcripts.fasta"
+  sed -i "s/>/>$samplePrefix/g" "./03_OrthoFinder/fasta/"$sampleCode"_cds.fasta"
 done
 
 cp $2 ./03_OrthoFinder/fasta/
 
 wget https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/001/594/045/GCF_001594045.1_Acol1.0/GCF_001594045.1_Acol1.0_cds_from_genomic.fna.gz
 gunzip GCF_001594045.1_Acol1.0_cds_from_genomic.fna.gz
-mv ./GCF_001594045.1_Acol1.0_cds_from_genomic.fna ./03_OrthoFinder/fasta/acol_transcripts.fasta
+mv ./GCF_001594045.1_Acol1.0_cds_from_genomic.fna ./03_OrthoFinder/fasta/acol_cds.fasta
 
 source /programs/miniconda3/bin/activate orthofinder-2.5.4
 
