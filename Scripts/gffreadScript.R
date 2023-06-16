@@ -54,11 +54,58 @@ liftOverAndExtract <- function(i) {
                           sep = "")
   cat(gffreadCommand)
   system(gffreadCommand)
+  
+  # Get the CDS, not just the transcript:
+  print(paste("Reading in transcripts for ",
+              i,
+              sep = ""))
+  newlyGeneratedTranscriptSequences <- phylotools::read.fasta(paste("./02_annotationsAndExons/",
+                                                                    i,
+                                                                    "/",
+                                                                    i,
+                                                                    "_transcripts.fasta",
+                                                                    sep = ""))
+  newlyGeneratedTranscriptSequences$cdsLocation <- str_split_i(newlyGeneratedTranscriptSequences$seq.name,
+                                                               pattern = "=",
+                                                               i = 2)
+  newlyGeneratedTranscriptSequences$start <- str_split_i(newlyGeneratedTranscriptSequences$cdsLocation,
+                                                         pattern = "-",
+                                                         i = 1)
+  newlyGeneratedTranscriptSequences$end <- str_split_i(newlyGeneratedTranscriptSequences$cdsLocation,
+                                                       pattern = "-",
+                                                       i = 2)
+  
+  print(paste("About to extract sequences for ",
+              i,
+              sep = ""))
+  newlyGeneratedTranscriptSequences$cdsSequence <- pmap(list(newlyGeneratedTranscriptSequences$seq.text, 
+                                                             newlyGeneratedTranscriptSequences$start, 
+                                                             newlyGeneratedTranscriptSequences$end), 
+                                                        str_sub)
+  newlyGeneratedTranscriptSequences <- newlyGeneratedTranscriptSequences %>%
+    dplyr::select(seq.name,
+                  cdsSequence)
+  newlyGeneratedTranscriptSequences$cdsSequence <- as.character(newlyGeneratedTranscriptSequences$cdsSequence)
+  colnames(newlyGeneratedTranscriptSequences) <- c("seq.name",
+                                                   "seq.text")
+  exportFile <- paste("./02_annotationsAndExons/",
+                      i,
+                      "/", 
+                      i,
+                      "_cds.fasta",
+                      sep = "")
+  print(paste("Exporting .fasta for ",
+              i,
+              sep = ""))
+  phylotools::dat2fasta(newlyGeneratedTranscriptSequences, 
+                        outfile = exportFile)
 }
 possiblyliftOverAndExtract <- possibly(liftOverAndExtract,
                                        otherwise = "Error")
 purrr::map(sampleList,
            possiblyliftOverAndExtract)
+
+
 
 # Now we can read those transcripts in and see how they align to the CVAR genome:
 checkNewAlignments <- function(i) {
