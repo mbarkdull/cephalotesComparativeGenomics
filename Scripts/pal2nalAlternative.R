@@ -1,8 +1,89 @@
-# Save every aligned amino acid sequence as a separate fasta:
-# First make a working directory and copy the folder with the MSA files there (THIS WILL NEED TO BE A VALUE SET ON THE COMMAND LINE). 
+### This script will go from aligned orthogroup files and cds files and run pal2nal on each gene, individualy, circumventing the errors you get when you run pal2nal on a batch input. ###
+# First make a directory for this step:
 dir.create("./testAligning")
+
+# Set up future for paralellization:
+library(furrr)
+future::plan(multisession)
+options(future.globals.maxSize= +Inf)
+
+# Now save every aligned amino acid sequence as a separate fasta:
+# Concatenate all of the MSA files into a single file:
 aminoAcidAlignments <- list.files("./04_alignedHOGs",
                                   full.names = TRUE)
+
+possiblyRead.fasta <- possibly(phylotools::read.fasta,
+                               otherwise = "Error")
+allaminoAcidAlignments <- future_map(aminoAcidAlignments,
+                                     possiblyRead.fasta)
+allaminoAcidAlignments <- as.data.frame(do.call(rbind, allaminoAcidAlignments))
+
+# Get the species abbreviations:
+abbreviations <- list.files(path = "./03_OrthoFinder/fasta/") %>%
+  str_split_i(pattern = "_",
+              i = 1)
+
+# Create a function to create a subsetted fasta file for each species:
+speciesChecking <- function(abbreviation){
+  outFile <- (paste("./testAligning/", 
+                    abbreviation, 
+                    "_alignedProteins.fasta", 
+                    sep = ""))
+  # Create a column with just the species abbreviation for the gene:
+  allaminoAcidAlignments$species <- str_split_i(allaminoAcidAlignments$seq.name,
+                                                pattern = "_",
+                                                i = 1)
+  # Create a column in the concatenated file that tells us if it matches the species abbreviation:
+  allaminoAcidAlignments$speciesMatch <- ifelse(grepl(abbreviation, 
+                                                      allaminoAcidAlignments$species), 
+                                                "True", 
+                                                "False")
+  # Make a dataframe that contains only the rows where $speciesMatch == True. 
+  SpeciesMSA <- subset(allaminoAcidAlignments, 
+                       speciesMatch == "True", 
+                       select = c("seq.name", 
+                                  "seq.text"))
+  # Replace non-terminal stop codons with Ns:
+  SpeciesMSA$seq.text <- gsub("\\*(?!-+$)", # This regex matches an asterisk, UNLESS it is followed by any number of hyphens and then an end-of-string.
+                              "N", 
+                              SpeciesMSA$seq.text, 
+                              perl = TRUE)
+  # Replace terminal Ns with stop codons:
+  SpeciesMSA$seq.text <- gsub("N$", # This regex matches any N followed by an end-of-string.
+                              "\\*", 
+                              SpeciesMSA$seq.text, 
+                              perl = TRUE)
+  # Replace Ns followed by only gaps with stop codons:
+  SpeciesMSA$seq.text <- gsub("(?!N)N(?=-+$)", # This regex matches any N followed by any number of hyphens and an end-of-string, UNLESS it is preceded by another N. 
+                              "\\*", 
+                              SpeciesMSA$seq.text, 
+                              perl = TRUE)
+  # Save that to a .fasta file: ../test.fasta
+  dat2fasta(SpeciesMSA, 
+            outfile = outFile)
+}
+
+# Apply the function to all species with future_map:
+possiblySpeciesChecking <- possibly(speciesChecking,
+                                    otherwise = "Error")
+future_map(abbreviations,
+           possiblySpeciesChecking)
+
+
+
+
+
+
+
+
+
+
+
+
+aminoAcidFiles <- paste("./testAligning/",
+                        abbreviations,
+                        "_alignedProteins.fasta",
+                        sep = "")
 
 splittingAminoAcidAlignments <- function(i) {
   sequence_name <- get.fasta.name(i)
@@ -19,7 +100,7 @@ splittingAminoAcidAlignments <- function(i) {
 
 possiblysplittingAminoAcidAlignments <- possibly(splittingAminoAcidAlignments,
                                                  otherwise = "Error")
-purrr::map(aminoAcidAlignments,
+future_map(aminoAcidFiles,
            possiblysplittingAminoAcidAlignments)
 
 # Get every coding sequence as a separate fasta:
@@ -52,7 +133,7 @@ splittingCDS <- function(abbreviation) {
 }
 possiblysplittingCDS <- possibly(splittingCDS,
                                  otherwise = "Error")
-purrr::map(abbreviations,
+future_map(abbreviations,
            possiblysplittingCDS)
 
 # Run pal2nal on individual pairs of files:
@@ -92,9 +173,6 @@ runPAL2NAL <- function(gene) {
 possiblyrunPAL2NAL <- possibly(runPAL2NAL,
                                otherwise = "Error")
 # Run the alignment in parallel, using furrr:
-library(furrr)
-future::plan(multisession)
-options(future.globals.maxSize= +Inf)
 future_map(allGenes,
            possiblyrunPAL2NAL)
 
