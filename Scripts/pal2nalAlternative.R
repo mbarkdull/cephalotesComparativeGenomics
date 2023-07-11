@@ -1,6 +1,6 @@
 ### This script will go from aligned orthogroup files and cds files and run pal2nal on each gene, individualy, circumventing the errors you get when you run pal2nal on a batch input. ###
 # First make a directory for this step:
-dir.create("./testAligning")
+dir.create("./06_AlignedNucleotideOrthogroups")
 
 # Set up future for paralellization:
 library(furrr)
@@ -25,7 +25,7 @@ abbreviations <- list.files(path = "./03_OrthoFinder/fasta/") %>%
 
 # Create a function to create a subsetted fasta file for each species:
 speciesChecking <- function(abbreviation){
-  outFile <- (paste("./testAligning/", 
+  outFile <- (paste("./06_AlignedNucleotideOrthogroups/", 
                     abbreviation, 
                     "_alignedProteins.fasta", 
                     sep = ""))
@@ -80,7 +80,7 @@ future_map(abbreviations,
 
 
 
-aminoAcidFiles <- paste("./testAligning/",
+aminoAcidFiles <- paste("./06_AlignedNucleotideOrthogroups/",
                         abbreviations,
                         "_alignedProteins.fasta",
                         sep = "")
@@ -90,7 +90,7 @@ splittingAminoAcidAlignments <- function(i) {
   sequence_group <- gsub("^CVAR_",
                          "CVAR_CVAR_",
                          sequence_name)
-  sequence_group <- paste("./testAligning/protein_",
+  sequence_group <- paste("./06_AlignedNucleotideOrthogroups/protein_",
                           sequence_group,
                           sep = "")
   group <- data.frame(sequence_name, sequence_group)
@@ -124,7 +124,7 @@ splittingCDS <- function(abbreviation) {
                                  "_",
                                  sequence_name_correct,
                                  sep = "")
-  sequence_group <- paste("./testAligning/cds_",
+  sequence_group <- paste("./06_AlignedNucleotideOrthogroups/cds_",
                           sequence_name_correct,
                           sep = "")
   group <- data.frame(sequence_name, sequence_group)
@@ -137,25 +137,25 @@ future_map(abbreviations,
            possiblysplittingCDS)
 
 # Run pal2nal on individual pairs of files:
-allGenes <- list.files(path = "./testAligning/",
+allGenes <- list.files(path = "./06_AlignedNucleotideOrthogroups/",
                        pattern = "cds_*") %>%
   str_split_i(pattern = "\\.",
               i = 1) %>%
   str_split_i(pattern = "cds_",
               i = 2)
-dir.create("./testAligning/alignedNucleotideSequences")
+dir.create("./06_AlignedNucleotideOrthogroups/alignedNucleotideSequences")
 
 # Run PAL2NAL:
 runPAL2NAL <- function(gene) {
-  alignedProteinsFile <- paste("./testAligning/protein_", 
+  alignedProteinsFile <- paste("./06_AlignedNucleotideOrthogroups/protein_", 
                                gene, 
                                ".fasta", 
                                sep = "")
-  cdsSequencesFile <- paste("./testAligning/cds_", 
+  cdsSequencesFile <- paste("./06_AlignedNucleotideOrthogroups/cds_", 
                             gene, 
                             ".fasta", 
                             sep = "")
-  outputFileName <- paste("./testAligning/alignedNucleotideSequences/", 
+  outputFileName <- paste("./06_AlignedNucleotideOrthogroups/alignedNucleotideSequences/", 
                           gene, 
                           "_nucleotideAlignments.fasta", 
                           sep = "")
@@ -176,3 +176,39 @@ possiblyrunPAL2NAL <- possibly(runPAL2NAL,
 future_map(allGenes,
            possiblyrunPAL2NAL)
 
+# Now recombine the individual cds sequences into orthogroups:
+dir.create("./06_AlignedNucleotideOrthogroups/alignedOrthogroupNucleotideSequences")
+aminoAcidAlignments <- list.files("./04_alignedHOGs",
+                                  full.names = TRUE)
+
+recombiningNucleotideOrthogroups <- function(i) {
+  # Read in one orthogroup:
+  aminoAcidOrthogroup <- read.fasta(i)
+  orthogroupNumber <- str_split_i(i,
+                                  pattern = "/",
+                                  i = 3)
+  # Get a list of the gene names in the orthogroup:
+  geneNames <- aminoAcidOrthogroup$seq.name
+  geneNames <- gsub("^CVAR_",
+                    "CVAR_CVAR_",
+                    geneNames)
+  geneNames <- paste("./06_AlignedNucleotideOrthogroups/alignedNucleotideSequences/",
+                     geneNames,
+                     "_nucleotideAlignments.fasta",
+                     sep = "")
+  possiblyRead.fasta <- possibly(phylotools::read.fasta,
+                                 otherwise = "Error")
+  allGenesInOrthogroup <- purrr::map(geneNames,
+                                     possiblyRead.fasta)
+  allGenesInOrthogroup <- as.data.frame(do.call(rbind, allGenesInOrthogroup)) %>%
+    filter(seq.name != "Error")
+  dat2fasta(allGenesInOrthogroup,
+            outfile = paste("./06_AlignedNucleotideOrthogroups/alignedOrthogroupNucleotideSequences/",
+                            orthogroupNumber,
+                            sep = ""))
+}
+possiblyrecombiningNucleotideOrthogroups <- possibly(recombiningNucleotideOrthogroups,
+                                                     otherwise = "Error")
+# Run the alignment in parallel, using furrr:
+future_map(aminoAcidAlignments,
+           possiblyrecombiningNucleotideOrthogroups)
