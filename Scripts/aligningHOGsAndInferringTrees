@@ -2,6 +2,7 @@
 
 # Script to align HOGs from Orthofinder and infer gene trees:
 # $1 should be the path to the HOG files
+# $2 should be the number of threads to use. 
 
 # Make output directories:
 mkdir ./04_alignedHOGs
