@@ -23,6 +23,6 @@ do
       #sed -i'.original' -e "s|\?|_|g" $cdsFile
       #rm $cdsFile.original
 
-      HYPHYMPI /workdir/mb2337/cephalotesComparativeGenomics/09_bustedPHResults/hyphy-analyses/BUSTED-PH/BUSTED-PH.bf --alignment $cdsFile --tree $treeFile --srv Yes
+      HYPHYMPI /workdir/mb2337/cephalotesComparativeGenomics/09_bustedPHResults/hyphy-analyses/BUSTED-PH/BUSTED-PH.bf --alignment $cdsFile --tree $treeFile --srv Yes --branches Foreground
 
 done < $1
