@@ -1,0 +1,27 @@
+#!/bin/bash
+
+# In this file:           #In BUSTEDPHchunks
+#   $1                        the chunked file listing CDS files
+
+while read -r line;
+do
+  export cdsFile=$line
+
+  #echo the coding sequence alignment file is $cdsFile
+  # The tree file needs to look like OG0002680_tree.txt. $f looks like  /8_2_RemovedStops/cleaned_OG0002680_cds.fasta.
+  export orthogroupNumber=`echo "$cdsFile" | awk -F'_' '{print ($3)}' | awk -F'.' '{print ($1)}'`
+  #echo The orthogroup number is $orthogroupNumber
+  # 9_1_LabelledPhylogenies/workerPolymorphism/workerPolymorphismLabelled_OG0007231_tree.txt
+  export treeFile=07_labelledPhylogenies/"labelled_"$orthogroupNumber"_tree.txt"
+  # Make sure vertical bars are replaced with underscores:
+      #echo Removing any special characters in $treeFile
+      #sed -i'.original' -e "s|\||_|g" $treeFile
+      #rm $treeFile.original
+
+      # Run RELAX:
+      echo Running RELAX on $cdsFile and $treeFile.
+      #sed -i'.original' -e "s|\?|_|g" $cdsFile
+      #rm $cdsFile.original
+      HYPHYMPI relax --alignment $cdsFile --tree $treeFile --test Foreground --srv Yes CPU=64 --output "./08_relaxResults/"$orthogroupNumber"_relax.json"
+
+done < $1
