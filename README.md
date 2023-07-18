@@ -119,7 +119,9 @@ If you use the species tree in your work then please also cite:
   - Emms D.M. & Kelly S. (2018), bioRxiv
     <https://doi.org/10.1101/267914>
 
-### Aligning orthogroup sequences and inferring gene trees
+### Producing nucleotide alignments and labelled gene trees
+
+#### Aligning orthogroup sequences and inferring gene trees
 
 We need to align the orthogroup sequences, and then infer a gene tree
 for each orthogroup. You can do this using the script
@@ -141,7 +143,7 @@ If you use this script, please cite:
     2–approximately maximum-likelihood trees for large alignments.”
     PloS one 5.3 (2010): e9490.
 
-### Producing codon-aware nucleotide sequence alignments
+#### Producing codon-aware nucleotide sequence alignments
 
 Now that we have aligned amino acid sequences, we need to use them to
 align our nucleotide sequences in a codon-aware fashion. You can do this
@@ -155,11 +157,7 @@ If you use this script, please cite:
     conversion of protein sequence alignments into the corresponding
     codon alignments. Nucleic Acids Res. 34, W609-W612.
 
-### Evolutionary analyses in Hyphy
-
-#### Prepping data for Hyphy
-
-##### Labelling phylogenies with foreground species and nodes
+#### Labelling phylogenies with foreground species and nodes
 
 The Hyphy analyses will need labelled gene trees for each orthogroup,
 with the tips (and internal nodes, if appropriate) that possess your
@@ -169,14 +167,54 @@ which runs a built-in Hyphy utility to label trees across all of the
 trees in the directory `./05_HOGTrees/`. The labelled phylogenies will
 be found in the directory `07_labelledPhylogenies`.
 
-The gene trees from Orthofinder have species labels appended to each
-gene name, causing them not to match the gene names in the orthogroup
-sequences files. To correct this, run the R script
-`./Scripts/removingTreePrefixes.R`.
+### Evolutionary analyses in Hyphy
+
+#### Assessing shifts in selection intensity with RELAX
+
+RELAX is a method from HYPHY that asks whether the strength of natural
+selection has been increased or decreased along test branches. In order
+to run RELAX, you’ll need a labelled phylogeny and a set of orthogroup
+sequences. Then, RELAX can be run with the command
+`./Scripts/RELAXanalysis [number of threads to use]`.
+
+This script subsets the orthogroups into a user-specified number of
+chunks, then starts a background process for each chunk, passing them to
+the script `./Scripts/SingleRELAXRun`, which runs RELAX on a single
+orthogroup. This allows you to take advantages of multiple cores on your
+machine, speeding up the run. You’ll want the number of chunks you
+specify on the command line to be the appropriate number of threads to
+use on your machine.
+
+Results will be output in the directory `./08_relaxResults`.
+
+If you use this script, please cite:
+
+  - Wertheim, Joel O., et al. “RELAX: detecting relaxed selection in a
+    phylogenetic framework.” Molecular biology and evolution 32.3
+    (2015): 820-832.
 
 #### Assessing positive selection with BUSTED-PH
 
-#### Assessing shifts in selection intensity with RELAX
+BUSTED-PH is a fairly new method from HYPHY that asks whether positive
+selection is associated with the presence or absence of a trait. In
+order to run BUSTED-PH, you’ll need a labelled phylogeny and a set of
+orthogroup sequences. Then, BUSTED-PH can be run with the command
+`./Scripts/BUSTEDPHanalysis [number of threads to use]`.
+
+This script subsets the orthogroups into a user-specified number of
+chunks, then starts a background process for each chunk, passing them to
+the script `./Scripts/SingleBustedPHRun`, which runs BUSTED-PH on a
+single orthogroup. This allows you to take advantages of multiple cores
+on your machine, speeding up the run. You’ll want the number of chunks
+you specify on the command line to be the appropriate number of threads
+to use on your machine.
+
+Results will be output in the directory `./09_bustedPHResults`.
+
+BUSTED-PH is currently an unpublished method, with no paper to cite.
+Please check the
+[GitHub](https://github.com/veg/hyphy-analyses/tree/master/BUSTED-PH) to
+see if the method has been published, and cite accordingly.
 
 ### Exploring evolution in non-coding elements
 
