@@ -1,0 +1,69 @@
+#!/bin/bash
+
+# Export required paths:
+export LD_LIBRARY_PATH=/usr/local/gcc-7.3.0/lib64:/usr/local/gcc-7.3.0/lib
+
+# Make a directory for BUSTED-PH outputs:
+mkdir ./bustedPHResults
+mkdir ./bustedPHResults/$2
+
+# Add HyPhy to your path:
+module load gcc/7.3.0
+export PATH=/programs/hyphy-2.5.49/bin:$PATH
+cd ./bustedPHResults
+git clone https://github.com/veg/hyphy-analyses.git
+cd ../
+
+rm sequencefileList.txt
+ls -hSr removedStops/*.fasta > sequencefileList.txt
+rm $2FileList.txt
+# Read the list of files and check that a corresponding tree file DOES exist and a corresponding output file does NOT exist.
+while read -r line;
+do
+export orthogroupNumber=`echo "$line" | awk -F'_' '{print ($2)}'`
+export treeFile=$1"labelled_cleaned_"$orthogroupNumber"_tree.txt"
+if [ -f "$treeFile" ]; then
+  echo "$treeFile exists."
+  FILE="./bustedPHResults/"$2"/"$2"_"$orthogroupNumber"_BUSTEDPH.fas.BUSTED.json"
+  if [ -s "$FILE" ]; then
+    echo "*************************************************************"
+    echo "$FILE exists; BUSTED-PH has already been run on this orthogroup."
+    echo "*************************************************************"
+  else
+    # Make sure vertical bars are replaced with underscores:
+    echo This file should be added to the file list
+    echo removedStops/cleaned_"$orthogroupNumber"_cdsSequences.fasta >> $2FileList.txt
+  fi
+else
+  echo "$treeFile does not exist."
+fi
+done < sequencefileList.txt
+
+# Split the list of allowable input files into a specified number of chunks:
+export chunkNumber="l/"$3
+split --number=$chunkNumber --additional-suffix=.txt -d $2FileList.txt $2"bustedphFileList"
+
+# Create a file listing those chunks:
+ls $2"bustedphFileList"* > $2"chunkList.txt"
+
+# Create a holder for the chunks:
+export batchSize=$3
+export currentBatch=0
+export batchFileNames=()
+
+# while reading each line in our list of chunked files,
+while read -r line;
+do
+  export batchFile=$line
+  batchFileNames+=($batchFile)
+
+  if [ ${#batchFileNames[@]} -eq $batchSize ]; then
+    for batchFile in ${batchFileNames[@]} ; do
+      sleep 1 &
+      ./Scripts/bustedPHIndividualTasks $batchFile $1 $2 &
+    done
+    wait
+    batchFileNames=()
+  fi
+
+done < $2"chunkList.txt"
