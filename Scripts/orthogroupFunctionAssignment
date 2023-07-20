@@ -75,70 +75,34 @@ do
   echo __________________________________________________
 done
 
+# Install kinfin:
+cd ./10_InterProScan
+git clone https://github.com/DRL/kinfin.git
+cd kinfin
+./install
+pip install docopt
+pip install matplotlib
+pip install scipy
+pip install ete3
+
+./kinfin
 
 
+# This will convert the concatenated InterProScan files into a format readable by KinFin.
+2to3 -w ./scripts/iprs2table.py
+./scripts/iprs2table.py -i ../all_proteins.tsv --domain_sources Pfam
 
+# Copy Orthofinder files that are needed to the KinFin directory:
+cp /workdir/mb2337/cephalotesComparativeGenomics/03_OrthoFinder/fasta/OrthoFinder/Results_Jul07/Orthogroups/Orthogroups.txt ./
+cp /workdir/mb2337/cephalotesComparativeGenomics/03_OrthoFinder/fasta/OrthoFinder/Results_Jul07/WorkingDirectory/SequenceIDs.txt ./
+cp /workdir/mb2337/cephalotesComparativeGenomics/03_OrthoFinder/fasta/OrthoFinder/Results_Jul07/WorkingDirectory/SpeciesIDs.txt ./
 
-    # This will check if interproscan is installed and located
-    if [ -d "./interproscan-5.52-86.0" ]
-    then
-        echo "InterProScan installed."
-        # This will check if a species has already been annotated and move to the next species if so.
-        FILE=./interproscan-5.52-86.0/out/$proteinName.tsv
-        if [ -f "$FILE" ]; then
-            echo "$FILE exists; moving to next species."
-        # If the species has not yet been annotated, this will copy the proteins file from the OrthoFinder directory and then run InterProScan on it.
-        else
-          cp 03_OrthoFinder/fasta/$proteinName ./interproscan-5.52-86.0/
-          sed -i'.original' -e "s|\*||g" ./interproscan-5.52-86.0/$proteinName
-          rm ./interproscan-5.52-86.0/*.original
-          echo __________________________________________________
-          cd ./interproscan-5.52-86.0
-          mkdir ./out
-          ./interproscan.sh -i $proteinName -d out/ -t p --goterms -appl Pfam -f TSV
-          cd ../
-        fi
+# Create the KinFin configuration file:
+echo '#IDX,TAXON' > config.txt
+sed 's/: /,/g' SpeciesIDs.txt | \
+    cut -f 1 -d"." \
+    >> config.txt
 
-      # Now concatenate all of the annotated protein files into a single file which can be passed to KinFin for orthogroup-level functional annotation.
-      cat ./interproscan-5.52-86.0/out/*.tsv > all_proteins.tsv
-
-      # Install kinfin:
-      git clone https://github.com/DRL/kinfin.git
-      cd kinfin
-      ./install
-      ./kinfin
-
-      # This will convert the concatenated InterProScan files into a format readable by KinFin.
-      ./kinfin/scripts/iprs2table.py -i all_proteins.tsv --domain_sources Pfam
-
-      # Copy Orthofinder files that are needed to the KinFin directory:
-      cp ../5_OrthoFinder/fasta/OrthoFinder/Results*/Orthogroups/Orthogroups.txt ./
-      cp ../5_OrthoFinder/fasta/OrthoFinder/Results*/WorkingDirectory/SequenceIDs.txt ./
-      cp ../5_OrthoFinder/fasta/OrthoFinder/Results*/WorkingDirectory/SpeciesIDs.txt ./
-
-      # Create the KinFin configuration file:
-      echo '#IDX,TAXON' > config.txt
-      sed 's/: /,/g' SpeciesIDs.txt | \
-          cut -f 1 -d"." \
-          >> config.txt
-
-      # Run the KinFin functional annotation script:
-      # This failed for me until I commented out 'ax.set_facecolor('white')' on lines 681 and 1754 of ./kinfin/src/kinfin.py. Once I commented them out with vim it worked fine.
-      ./kinfin/kinfin --cluster_file Orthogroups.txt --config_file config.txt --sequence_ids_file SequenceIDs.txt --functional_annotation functional_annotation.txt
-
-    else
-        echo "InterProScan not installed; installing now."
-        wget http://ftp.ebi.ac.uk/pub/software/unix/iprscan/5/5.52-86.0/interproscan-5.52-86.0-64-bit.tar.gz
-        tar -xzvf interproscan-5.52-86.0-64-bit.tar.gz
-
-        cp 03_OrthoFinder/fasta/$proteinName ./interproscan-5.52-86.0/
-        sed -i'.original' -e "s|\*||g" ./interproscan-5.52-86.0/$proteinName
-        rm ./interproscan-5.52-86.0/*.original
-        echo __________________________________________________
-        cd ./interproscan-5.52-86.0
-        mkdir ./out
-        ./interproscan.sh -i $proteinName -d out/ -t p --goterms -appl Pfam -f TSV
-        cd ../
-    fi
-    cd ../
-  done < $1
+# Run the KinFin functional annotation script:
+# This failed for me until I commented out 'ax.set_facecolor('white')' on lines 681 and 1754 of ./kinfin/src/kinfin.py. Once I commented them out with vim it worked fine.
+./kinfin --cluster_file Orthogroups.txt --config_file config.txt --sequence_ids_file SequenceIDs.txt --functional_annotation functional_annotation.txt
