@@ -122,7 +122,7 @@ RELAX is a method from HYPHY that asks whether the strength of natural selection
 
 This script subsets the orthogroups into a user-specified number of chunks, then starts a background process for each chunk, passing them to the script `./Scripts/SingleRELAXRun`, which runs RELAX on a single orthogroup. This allows you to take advantages of multiple cores on your machine, speeding up the run. You’ll want the number of chunks you specify on the command line to be the appropriate number of threads to use on your machine.
 
-Results will be output in the directory `./08_relaxResults`.
+Results will be output in the directory `./08_relaxResults`, and can be parsed with the script `./Scripts/parsingHYPHYResults.R`.
 
 If you use this script, please cite:
   
@@ -134,9 +134,17 @@ BUSTED-PH is a fairly new method from HYPHY that asks whether positive selection
 
 This script subsets the orthogroups into a user-specified number of chunks, then starts a background process for each chunk, passing them to the script `./Scripts/SingleBustedPHRun`, which runs BUSTED-PH on a single orthogroup. This allows you to take advantages of multiple cores on your machine, speeding up the run. You’ll want the number of chunks you specify on the command line to be the appropriate number of threads to use on your machine.
 
-Results will be output in the directory `./09_bustedPHResults`.
+Results will be output in the directory `./09_bustedPHResults`, and can be parsed with the script `./Scripts/parsingHYPHYResults.R`.
 
 BUSTED-PH is currently an unpublished method, with no paper to cite. Please check the [GitHub](https://github.com/veg/hyphy-analyses/tree/master/BUSTED-PH) to see if the method has been published, and cite accordingly.
+
+### Functionally annotating orthogroups
+It may be interesting to assess GO term enrichment in the orthogroups under various selective regimes. To do this, orthogroups must be assigned GO terms. This can be done using the script `./Scripts/orthogroupFunctionAssignment`, which runs 1) InterProScan and 2) KinFin to assign functions. The results of this step will be in the directory `./10_InterProScan`, and can be used when parsing RELAX and BUSTED-PH results to perform GO term enrichment. 
+
+If you use this script, please cite:
+
+  + Paysan-Lafosse T, Blum M, Chuguransky S, Grego T, Pinto BL, Salazar GA, Bileschi ML, Bork P, Bridge A, Colwell L, Gough J, Haft DH, Letunić I, Marchler-Bauer A, Mi H, Natale DA, Orengo CA, Pandurangan AP, Rivoire C, Sigrist CJA, Sillitoe I, Thanki N, Thomas PD, Tosatto SCE, Wu CH, Bateman A. InterPro in 2022. Nucleic Acids Research, Nov 2022, (doi: 10.1093/nar/gkac993)
+  + Laetsch DR and Blaxter ML, 2017. KinFin: Software for Taxon-Aware Analysis of Clustered Protein Sequences. G3: Genes, Genomes, Genetics. Doi:10.1534/g3.117.300233
 
 ### Exploring evolution in non-coding elements
 https://onlinelibrary.wiley.com/doi/full/10.1111/mec.15982
