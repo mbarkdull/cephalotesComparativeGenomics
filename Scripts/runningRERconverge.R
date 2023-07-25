@@ -192,3 +192,33 @@ alignmentFiles <- list.files(path = "./11_RERconverge/02_filteredAlignments",
 # Map over the alignments using future_map:
 furrr::future_map(alignmentFiles,
                   possiblyproducingInputGeneTrees)
+
+# Now combine trees into a single tab delimited file as required by RERconverge:
+# See https://clark.genetics.utah.edu/wp-content/uploads/2020/11/FullWalkthroughUTD.html#reading-in-gene-trees-with-readtrees
+treesToCombine <- list.files("./11_RERconverge/03_RERconvergeInputTrees",
+                             full.names = TRUE)
+createMasterTreeFile <- function(input) {
+  tree <- readr::read_file(input)
+  tree <- gsub("\n",
+               "",
+               tree)
+  orthogroupNumber <- stringr::str_split_i(input, 
+                                           pattern = "/",
+                                           i = 4) %>%
+    stringr::str_split_i(pattern = "\\.",
+                         i = 1)
+  singleResult <- c(orthogroupNumber, tree)
+  return(singleResult)
+}
+possiblycreateMasterTreeFile <- purrr::possibly(createMasterTreeFile,
+                                                otherwise = "Error")
+masterTreeFile <- purrr::map(treesToCombine,
+                             possiblycreateMasterTreeFile)
+masterTreeFile <- as.data.frame(do.call(rbind, masterTreeFile)) 
+write.table(masterTreeFile, 
+            file = "./11_RERconverge/masterTreeFile.txt", 
+            sep = "\t",
+            row.names = FALSE,
+            quote = FALSE)
+
+## Run RERconverge analyses ----
