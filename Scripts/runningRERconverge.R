@@ -172,9 +172,12 @@ producingInputGeneTrees <- function(alignmentFile) {
                          optEdge = T,
                          rearrangement = "none",
                          model = "GTR")
-  # Return the tree:
-  finalTree$tree
-  ape::write.tree(finalTree$tree, 
+  # change the tip labels for the tree to just the species codes:
+  tree <- finalTree$tree
+  tree[["tip.label"]] <- stringr::str_split_i(tree[["tip.label"]], 
+                                              pattern = "_", 
+                                              i = 1)
+  ape::write.tree(tree, 
                   file = paste("./11_RERconverge/03_RERconvergeInputTrees/",
                                orthogroupNumber,
                                ".tree",
@@ -219,6 +222,83 @@ write.table(masterTreeFile,
             file = "./11_RERconverge/masterTreeFile.txt", 
             sep = "\t",
             row.names = FALSE,
+            col.names = FALSE,
             quote = FALSE)
 
 ## Run RERconverge analyses ----
+# Read in all trees:
+rerConvergeTrees <- readTrees("./11_RERconverge/masterTreeFile.txt")
+
+# Estimate relative evolutionary rates:
+relativeEvolutionaryRates <- getAllResiduals(rerConvergeTrees,
+                                             min.sp = 2,
+                                             transform = "sqrt", 
+                                             weighted = T, 
+                                             scale = T)
+# Do some plotting
+#make average and gene tree plots
+outgroup <- c("CVAR",
+              "POW0461")
+par(mfrow = c(1, 2))
+averageTree <- plotTreeHighlightBranches(rerConvergeTrees$masterTree, 
+                                         outgroup = outgroup,
+                                         hlspecies = c("CVAR",
+                                                       "CSM3441",
+                                                       "POW0123"), 
+                                         hlcols = c("blue",
+                                                    "red"), 
+                                         main = "Average tree") 
+specificGeneTree <- plotTreeHighlightBranches(rerConvergeTrees$trees$HOG0000032, 
+                                              outgroup = outgroup, 
+                                              hlspecies=c("CVAR",
+                                                          "CSM3441",
+                                                          "POW0123"), 
+                                              hlcols = c("blue",
+                                                         "red"), 
+                                              main="HOG0000032 tree") 
+#plot RERs
+par(mfrow = c(1,1))
+# Set the species of interest as the foreground:
+foregroundSpecies <- foreground2Paths(c("CVAR",
+                                        "CSM3441",
+                                        "POW0123"),
+                                      rerConvergeTrees,
+                                      clade = "terminal")
+plotRers(relativeEvolutionaryRates,
+         "HOG0000032",
+         phenv = foregroundSpecies)
+newbend3rers <- treePlotRers(treesObj = rerConvergeTrees, 
+                             rermat = relativeEvolutionaryRates, 
+                             index = "HOG0000032", 
+                             type = "c", 
+                             nlevels = 3, 
+                             figwid = 10)
+# Do binary trait analysis:
+# Select foreground species:
+foregroundSpecies <- c("CVAR",
+                       "CSM3441",
+                       "POW0123")
+# Set terminal branches leading to those species as the foreground:
+foregroundBranches <- foreground2Tree(foregroundSpecies, 
+                                      rerConvergeTrees, 
+                                      clade = "terminal",
+                                      useSpecies=c("CVAR", "CSM3685", "CSM3441", "POW0123", "POW0461", "CSM3677"))
+# Generate paths describing trait evolution for gene trees that don't have all six species:
+pathsForSubset <- foreground2Paths(foregroundSpecies, 
+                                   rerConvergeTrees, 
+                                   clade = "all")
+# Correlate the trait with polymorphism:
+correlationForPolymorphism <- correlateWithBinaryPhenotype(relativeEvolutionaryRates, 
+                                                           pathsForSubset, 
+                                                           min.sp = 5, 
+                                                           min.pos = 1,
+                                                           weighted = "auto")
+head(correlationForPolymorphism[order(correlationForPolymorphism$P),])
+plotRers(relativeEvolutionaryRates,
+         "HOG0000032",
+         phenv = pathsForSubset) 
+hist(correlationForPolymorphism$p.adj, 
+     breaks = 15, 
+     xlab = "Adjusted Kendall P-value", 
+     main = "Adjusted p-values for correlation between genes and polymorphism")
+
