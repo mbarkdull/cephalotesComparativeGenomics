@@ -1,4 +1,34 @@
 dir.create("./11_RERconverge")
+
+# Load packages:
+library("furrr")
+library("future")
+library("RERconverge")
+library("Matrix")
+library("castor")
+library("FSA")
+library("dplyr")
+library("ggplot2")
+library("phangorn")
+library("weights")
+library("Hmisc")
+library("RcppArmadillo")
+library("Rcpp")
+library("knitr")
+library("geiger")
+library("phytools")
+library("maps")
+library("ape")
+library("gplots")
+library("RColorBrewer")
+library("stats")
+library("graphics")
+library("grDevices")
+library("utils")
+library("datasets")
+library("methods")
+library("base")
+
 # Set up future for paralellization:
 library(furrr)
 future::plan(multisession)
@@ -152,36 +182,42 @@ producingInputGeneTrees <- function(alignmentFile) {
                               orthogroupNumber,
                               ".tree",
                               sep = ""))
-  # Unroot the tree
-  geneTree <- unroot(geneTree)
-  # Just in case, set all branches to 1 first (as per RERconverge function)
-  geneTree$edge.length <- c(rep(1,
-                                nrow(geneTree$edge)))
   
-  #Run distance estimation using the generalized time reversible submodel:
-  # Generate an initial pml tree, using default settings from RERconverge:
-  initialTree <- phangorn::pml(tree = geneTree, 
-                               data = alignment, 
-                               model = "GTR", 
-                               k = 4, 
-                               rearrangement = "none")
-  # Generate a tree
-  finalTree <- optim.pml(initialTree,
-                         optInv = T,
-                         optGamma = T,
-                         optEdge = T,
-                         rearrangement = "none",
-                         model = "GTR")
-  # change the tip labels for the tree to just the species codes:
-  tree <- finalTree$tree
-  tree[["tip.label"]] <- stringr::str_split_i(tree[["tip.label"]], 
-                                              pattern = "_", 
-                                              i = 1)
-  ape::write.tree(tree, 
-                  file = paste("./11_RERconverge/03_RERconvergeInputTrees/",
-                               orthogroupNumber,
-                               ".tree",
-                               sep = ""))
+  if (length(geneTree[["tip.label"]]) > 2) {
+    # Unroot the tree
+    geneTree <- unroot(geneTree)
+    # Just in case, set all branches to 1 first (as per RERconverge function)
+    geneTree$edge.length <- c(rep(1,
+                                  nrow(geneTree$edge)))
+    
+    #Run distance estimation using the generalized time reversible submodel:
+    # Generate an initial pml tree, using default settings from RERconverge:
+    initialTree <- phangorn::pml(tree = geneTree, 
+                                 data = alignment, 
+                                 model = "GTR", 
+                                 k = 4, 
+                                 rearrangement = "none")
+    # Generate a tree
+    finalTree <- optim.pml(initialTree,
+                           optInv = T,
+                           optGamma = T,
+                           optEdge = T,
+                           rearrangement = "none",
+                           model = "GTR")
+    # change the tip labels for the tree to just the species codes:
+    tree <- finalTree$tree
+    tree[["tip.label"]] <- stringr::str_split_i(tree[["tip.label"]], 
+                                                pattern = "_", 
+                                                i = 1)
+    ape::write.tree(tree, 
+                    file = paste("./11_RERconverge/03_RERconvergeInputTrees/",
+                                 orthogroupNumber,
+                                 ".tree",
+                                 sep = ""))
+  } else {
+    print("Too few tips in tree; skipping this orthogroup")
+  }
+  
 }
 
 # Make a safe version with possibly:
@@ -190,7 +226,29 @@ possiblyproducingInputGeneTrees <- purrr::possibly(producingInputGeneTrees,
 
 # List all of the alignments:
 alignmentFiles <- list.files(path = "./11_RERconverge/02_filteredAlignments",
-                             full.names = TRUE)
+                             full.names = TRUE) %>%
+  stringr::str_split_i(pattern = "/",
+                       i = 4) %>%
+  stringr::str_split_i(pattern = "\\.",
+                       i = 1)  %>%
+  stringr::str_split_i(pattern = "_",
+                       i = 2)
+
+# List any extant tree files:
+extantTreeFiles <- list.files(path = "./11_RERconverge/03_RERconvergeInputTrees",
+                              full.names = TRUE) %>%
+  stringr::str_split_i(pattern = "/",
+                       i = 4) %>%
+  stringr::str_split_i(pattern = "\\.",
+                       i = 1)
+
+# Remove any alignment files that correspond to extant trees:
+stillToInferTree <- setdiff(alignmentFiles,
+                            extantTreeFiles)
+alignmentFiles <- paste("./11_RERconverge/02_filteredAlignments/filtered_",
+                        stillToInferTree,
+                        ".fasta",
+                        sep = "")
 
 # Map over the alignments using future_map:
 furrr::future_map(alignmentFiles,
