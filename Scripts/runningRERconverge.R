@@ -1,33 +1,34 @@
 dir.create("./11_RERconverge")
 
 # Load packages:
-library("furrr")
-library("future")
-library("RERconverge")
-library("Matrix")
-library("castor")
-library("FSA")
-library("dplyr")
-library("ggplot2")
-library("phangorn")
-library("weights")
-library("Hmisc")
-library("RcppArmadillo")
-library("Rcpp")
-library("knitr")
-library("geiger")
-library("phytools")
-library("maps")
-library("ape")
-library("gplots")
-library("RColorBrewer")
-library("stats")
-library("graphics")
-library("grDevices")
-library("utils")
-library("datasets")
-library("methods")
-library("base")
+library(furrr)
+library(future)
+library(RERconverge)
+library(Matrix)
+library(castor)
+library(FSA)
+library(dplyr)
+library(ggplot2)
+library(phangorn)
+library(weights)
+library(Hmisc)
+library(RcppArmadillo)
+library(Rcpp)
+library(knitr)
+library(geiger)
+library(phytools)
+library(maps)
+library(ape)
+library(gplots)
+library(RColorBrewer)
+library(stats)
+library(graphics)
+library(grDevices)
+library(utils)
+library(datasets)
+library(methods)
+library(base)
+library(tidyverse)
 
 # Set up future for paralellization:
 library(furrr)
@@ -162,6 +163,7 @@ furrr::future_map(orthogroupTrees,
 
 ## Using those orthogroup trees and filtered alignments, infer trees with branch lengths for RERconverge input ----
 dir.create("./11_RERconverge/03_RERconvergeInputTrees")
+dir.create("./11_RERconverge/02_filteredAlignments/tooFewTips")
 
 # Write a function to read in a single orthogroup reference tree and an alignment, and produce a tree for RERconverge from those:
 producingInputGeneTrees <- function(alignmentFile) {
@@ -184,6 +186,11 @@ producingInputGeneTrees <- function(alignmentFile) {
                               sep = ""))
   
   if (length(geneTree[["tip.label"]]) > 2) {
+    message <- paste("Inferring tree for",
+                     orthogroupNumber,
+                     sep = " ") %>%
+      as.character()
+    print(message)
     # Unroot the tree
     geneTree <- unroot(geneTree)
     # Just in case, set all branches to 1 first (as per RERconverge function)
@@ -215,9 +222,18 @@ producingInputGeneTrees <- function(alignmentFile) {
                                  ".tree",
                                  sep = ""))
   } else {
-    print("Too few tips in tree; skipping this orthogroup")
+    message <- paste("Too few tips in tree; skipping",
+                     orthogroupNumber,
+                     sep = " ") %>%
+      as.character()
+    print(message)
+    file.copy(from = alignmentFile,
+              to = paste("./11_RERconverge/02_filteredAlignments/tooFewTips/", 
+                         orthogroupNumber,
+                         ".fasta",
+                         sep = ""))
+    file.remove(from = alignmentFile)
   }
-  
 }
 
 # Make a safe version with possibly:
@@ -248,7 +264,8 @@ stillToInferTree <- setdiff(alignmentFiles,
 alignmentFiles <- paste("./11_RERconverge/02_filteredAlignments/filtered_",
                         stillToInferTree,
                         ".fasta",
-                        sep = "")
+                        sep = "") %>%
+  sample()
 
 # Map over the alignments using future_map:
 furrr::future_map(alignmentFiles,
