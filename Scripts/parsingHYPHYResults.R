@@ -207,6 +207,12 @@ allBustedphResults$backgroundPvalueFDR <- p.adjust(allBustedphResults$background
 allBustedphResults$differencePvalueFDR <- p.adjust(allBustedphResults$differencePvalue, method='BH') %>%
   as.numeric(as.character()) 
 
+# Export the results to a csv:
+write_delim(allBustedphResults,
+            file = "./allBustedPHResults.csv",
+            delim = ",",
+            quote = "none")
+
 # Get dataframes of orthogroups positively selected in the fore- and background:
 foregroundPositiveSelection <- filter(allBustedphResults, 
                                       testPvalueFDR <= 0.05,
@@ -313,7 +319,14 @@ runningGOEnrichmentBUSTEDPH <- function(geneSet) {
     print("Must specify geneSet as either `foreground` or `background`")
   }
 }
-runningGOEnrichmentBUSTEDPH("foreground")
-runningGOEnrichmentBUSTEDPH("background")
 
+bustedGoResultsForeground <- runningGOEnrichmentBUSTEDPH("foreground")
+bustedGoResultsBackground <- runningGOEnrichmentBUSTEDPH("background")
+bustedGoResults <- rbind(bustedGoResultsForeground,
+                         bustedGoResultsBackground)
 
+# Export the results to a csv:
+write_delim(bustedGoResults,
+            file = "./allBustedPHGOResults.csv",
+            delim = ",",
+            quote = "none")
