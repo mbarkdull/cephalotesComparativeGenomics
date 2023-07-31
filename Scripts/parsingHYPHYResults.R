@@ -49,6 +49,12 @@ allRelaxResults$kValue <- as.numeric(as.character(allRelaxResults$kValue))
 # Do FDR correction on the p-values:
 allRelaxResults$pValueFDR <- p.adjust(allRelaxResults$pValue, method='BH') 
 
+# Export the allRelaxResults to a csv:
+write_delim(allRelaxResults,
+            file = "./allRelaxResults.csv",
+            delim = ",",
+            quote = "none")
+
 # Get dataframes of the relaxed and intensified genes
 significantlyRelaxedGenes <- filter(allRelaxResults, 
                                     kValue < 1 &
@@ -150,12 +156,18 @@ runningGOEnrichmentRELAX <- function(geneSet) {
     print("Must specify geneSet as either `relaxed` or `intensified`")
   }
 }
-runningGOEnrichmentRELAX("relaxed")
-runningGOEnrichmentRELAX("intensified")
 
+relaxGoResultsRelaxed <- runningGOEnrichmentRELAX("relaxed")
+relaxGoResultsIntensified <- runningGOEnrichmentRELAX("intensified")
 
+relaxGoResults <- rbind(relaxGoResultsRelaxed,
+                        relaxGoResultsIntensified)
 
-
+# Export the results to a csv:
+write_delim(relaxGoResults,
+            file = "./allrelaxGoResults.csv",
+            delim = ",",
+            quote = "none")
 
 #### Read in BUSTED-PH results and do GO enrichment ####
 # List all results file with size greater than zero:
