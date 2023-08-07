@@ -23,8 +23,8 @@ parsingRelax <- function(i) {
 # Apply that to all the results files:
 possiblyparsingRelax <- purrr::possibly(parsingRelax,
                                         otherwise = "Error")
-allRelaxResults <- map(relaxResults,
-                       possiblyparsingRelax)
+allRelaxResults <- purrr::map(relaxResults,
+                              possiblyparsingRelax)
 allRelaxResults <- as.data.frame(do.call(rbind, allRelaxResults))   
 
 # Give the results meaningful column names:
@@ -33,14 +33,14 @@ colnames(allRelaxResults) <- c("inputFile",
                                "pValue")
 
 # Get a column with the orthogroup ID:
-allRelaxResults$orthogroup <- str_split_i(allRelaxResults$inputFile, 
-                                          pattern = "/",
-                                          i = 9)
-allRelaxResults$orthogroup <- str_split_i(allRelaxResults$orthogroup,
-                                          pattern = "_",
-                                          i = 2) %>%
-  str_split_i(pattern = "\\.",
-              i = 1)
+allRelaxResults$orthogroup <- stringr::str_split_i(allRelaxResults$inputFile, 
+                                                   pattern = "/",
+                                                   i = 9)
+allRelaxResults$orthogroup <- stringr::str_split_i(allRelaxResults$orthogroup,
+                                                   pattern = "_",
+                                                   i = 2) %>%
+  stringr::str_split_i(pattern = "\\.",
+                       i = 1)
 
 # Make sure the numeric columns are really numeric:
 allRelaxResults$pValue <- as.numeric(as.character(allRelaxResults$pValue)) 
@@ -162,6 +162,7 @@ relaxGoResultsIntensified <- runningGOEnrichmentRELAX("intensified")
 
 relaxGoResults <- rbind(relaxGoResultsRelaxed,
                         relaxGoResultsIntensified)
+relaxGoResults
 
 # Export the results to a csv:
 write_delim(relaxGoResults,
@@ -189,8 +190,8 @@ parsingBustedph <- function(i) {
 # Apply that to all the results:
 possiblyparsingBustedph <- purrr::possibly(parsingBustedph,
                                            otherwise = "Error")
-allBustedphResults <- map(bustedphResults,
-                          possiblyparsingBustedph)
+allBustedphResults <- purrr::map(bustedphResults,
+                                 possiblyparsingBustedph)
 allBustedphResults <- as.data.frame(do.call(rbind, allBustedphResults))   
 
 # Give columns meaningful names:
@@ -200,11 +201,11 @@ colnames(allBustedphResults) <- c("inputFile",
                                   "differencePvalue")
 
 # Get a column with just the orthogroup ID:
-allBustedphResults$orthogroup <- str_split_i(allBustedphResults$inputFile, 
-                                             pattern = "/",
-                                             i = 7) %>%
-  str_split_i(pattern = "_", 
-              i = 1)
+allBustedphResults$orthogroup <- stringr::str_split_i(allBustedphResults$inputFile, 
+                                                      pattern = "/",
+                                                      i = 7) %>%
+  stringr::str_split_i(pattern = "_", 
+                       i = 1)
 
 # Make sure columns are numeric:
 allBustedphResults$testPvalue <- as.numeric(as.character(allBustedphResults$testPvalue)) 
