@@ -302,7 +302,7 @@ write.table(masterTreeFile,
 
 ## Run RERconverge analyses ----
 # Read in all trees:
-rerConvergeTrees <- readTrees("./11_RERconverge/masterTreeFile.txt")
+rerConvergeTrees <- RERconverge::readTrees("./11_RERconverge/masterTreeFile.txt")
 
 # Estimate relative evolutionary rates:
 relativeEvolutionaryRates <- getAllResiduals(rerConvergeTrees,
@@ -320,17 +320,15 @@ averageTree <- plotTreeHighlightBranches(rerConvergeTrees$masterTree,
                                          hlspecies = c("CVAR",
                                                        "CSM3441",
                                                        "POW0123"), 
-                                         hlcols = c("blue",
-                                                    "red"), 
+                                         hlcols = c("blue"), 
                                          main = "Average tree") 
-specificGeneTree <- plotTreeHighlightBranches(rerConvergeTrees$trees$HOG0000032, 
+specificGeneTree <- plotTreeHighlightBranches(rerConvergeTrees$trees$HOG0012661, 
                                               outgroup = outgroup, 
                                               hlspecies=c("CVAR",
                                                           "CSM3441",
                                                           "POW0123"), 
-                                              hlcols = c("blue",
-                                                         "red"), 
-                                              main="HOG0000032 tree") 
+                                              hlcols = c("blue"), 
+                                              main="HOG0012661 tree") 
 #plot RERs
 par(mfrow = c(1,1))
 # Set the species of interest as the foreground:
@@ -340,11 +338,11 @@ foregroundSpecies <- foreground2Paths(c("CVAR",
                                       rerConvergeTrees,
                                       clade = "terminal")
 plotRers(relativeEvolutionaryRates,
-         "HOG0000032",
+         "HOG0012661",
          phenv = foregroundSpecies)
 newbend3rers <- treePlotRers(treesObj = rerConvergeTrees, 
                              rermat = relativeEvolutionaryRates, 
-                             index = "HOG0000032", 
+                             index = "HOG0012661", 
                              type = "c", 
                              nlevels = 3, 
                              figwid = 10)
@@ -365,12 +363,12 @@ pathsForSubset <- foreground2Paths(foregroundSpecies,
 # Correlate the trait with polymorphism:
 correlationForPolymorphism <- correlateWithBinaryPhenotype(relativeEvolutionaryRates, 
                                                            pathsForSubset, 
-                                                           min.sp = 5, 
+                                                           min.sp = 2, 
                                                            min.pos = 1,
                                                            weighted = "auto")
 head(correlationForPolymorphism[order(correlationForPolymorphism$P),])
 plotRers(relativeEvolutionaryRates,
-         "HOG0000032",
+         "HOG0012661",
          phenv = pathsForSubset) 
 hist(correlationForPolymorphism$p.adj, 
      breaks = 15, 
