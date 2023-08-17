@@ -238,8 +238,32 @@ If you use this script, please cite:
     2022, (doi: 10.1093/nar/gkac993)
   - Laetsch DR and Blaxter ML, 2017. KinFin: Software for Taxon-Aware
     Analysis of Clustered Protein Sequences. G3: Genes, Genomes,
-    Genetics. <Doi:10.1534/g3.117.300233>
+    Genetics.
+<Doi:10.1534/g3.117.300233>
 
 ### Exploring evolution in non-coding elements
 
 <https://onlinelibrary.wiley.com/doi/full/10.1111/mec.15982>
+
+#### Are the promoters of genes under selection enriched for particular transcription factor binding motifs?
+
+Perhaps the genes that are under a particular selective regime are more
+likely than other to be regulated by a particular transcription factor.
+To understand this, we can do transcription factor binding motif
+enrichment analysis. You can run this with the script
+`./Scripts/transcriptionFactorEnrichment.R`, which:
+
+1.  Identifies putative promoter sequences, i.e. 2,000bp regions
+    upstream of all genes
+2.  Tests whether any motifs are overrepresented in the promoters for
+    genes under selection compared to genes not under selection, using
+    the JASPAR2022 motif database and MEME-SEA.
+
+If you use this script, please cite: + Quinlan, Aaron R., and Ira M.
+Hall. “BEDTools: a flexible suite of utilities for comparing genomic
+features.” Bioinformatics 26.6 (2010): 841-842. + Bailey, Timothy L.,
+and Charles E. Grant. “SEA: simple enrichment analysis of motifs.”
+BioRxiv (2021): 2021-08. + Castro-Mondragon, Jaime A., et al. “JASPAR
+2022: the 9th release of the open-access database of transcription
+factor binding profiles.” Nucleic acids research 50.D1 (2022):
+D165-D173.
