@@ -105,6 +105,7 @@ genes <- unique(annotation$ID)
 purrr::map(genes, 
            possiblyIdentifyingPromoterRegions)
 
+#### Do enrichment analysis: ####
 # Read in the results for further use:
 genesWithPromoters <- read_delim(file = "./14_SEAenrichment/genesWithPromoters.gff",
                                  delim = "\t",
@@ -169,6 +170,7 @@ genesUnderSelection$CVARgene <- gsub(pattern = "\\|",
 selectionRegimes <- unique(genesUnderSelection$selectionCategory)
 
 transcriptionFactorEnrichment <- function(type) {
+  # Get just the genes under the focal selective regime:
   selectionSubset <- filter(genesUnderSelection,
                             selectionCategory == type)
   
@@ -176,17 +178,18 @@ transcriptionFactorEnrichment <- function(type) {
   annotationsUnderSelection <- filter(genesWithPromoters, 
                                       ID %in% selectionSubset$CVARgene) %>%
     subset(select = -c(ID))
-  
+  # Get just the promoters under that selective regime
   promotersUnderSelection <- filter(annotationsUnderSelection, 
                                     type == "promoter")
   
   # Subset all of the annotations, including promoters, to those corresponding to genes NOT under selection:
   annotationsNotUnderSelection <- filter(genesWithPromoters, 
-                                         !(ID %in% genesUnderSelection$CVARgene)) %>%
+                                         !(ID %in% selectionSubset$CVARgene)) %>%
     subset(select = -c(ID))
   
   promotersNotUnderSelection <- filter(annotationsNotUnderSelection, 
                                        type == "promoter")
+  length(promotersNotUnderSelection$seqid)
   
   # Export those data:
   readr::write_delim(promotersUnderSelection,
@@ -248,7 +251,7 @@ transcriptionFactorEnrichment <- function(type) {
 }
 
 possiblytranscriptionFactorEnrichment <- purrr::possibly(transcriptionFactorEnrichment,
-                                                         otherwise = "Error.")
+                                                         otherwise = "Error.") 
 
 library(furrr)
 future::plan(multisession)
