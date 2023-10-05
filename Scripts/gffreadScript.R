@@ -3,6 +3,7 @@ library(phylotools)
 library(msa)
 library(stringi)
 library(spgs)
+library(bioseq)
 
 # pseudo-it produced a reference-guided genome assembly and a chain file so that you can lift over the reference annotations. 
 # Here, we will do that with UCSC's liftOver tool.
@@ -11,7 +12,7 @@ library(spgs)
 dir.create("./02_annotationsAndExons/")
 
 # List all the samples we need to iterate over:
-sampleList <- list.files(path = "./pseudo-it/",
+sampleList <- list.files(path = "./01_pseudo-it/",
                          pattern = "aligned*",
                          include.dirs = TRUE) %>%
   str_split_i(pattern = "ed",
@@ -24,7 +25,7 @@ liftOverAndExtract <- function(i) {
                    sep = ""))
   
   # Run liftOver to create the new annotation file:
-  liftOverCommand <- paste("~/miniconda3/bin/liftOver -gff ./CVAR/CVAR_OGS_v1.0.gff3 ./pseudo-it/aligned",
+  liftOverCommand <- paste("~/miniconda3/bin/liftOver -gff ./CVAR/CVAR_OGS_v1.0.gff3 ./01_pseudo-it/aligned",
                            i,
                            "/iter-04/fa/iter-04-softmask-final.chain ./02_annotationsAndExons/",
                            i,
@@ -44,7 +45,7 @@ liftOverAndExtract <- function(i) {
                           i,
                           "/", 
                           i,
-                          "_transcripts.fasta -g ./pseudo-it/aligned",
+                          "_transcripts.fasta -g ./01_pseudo-it/aligned",
                           i, 
                           "/iter-04/fa/iter-04-softmask-final.fa ./02_annotationsAndExons/",
                           i,
@@ -176,8 +177,34 @@ possiblycheckNewAlignments <- possibly(checkNewAlignments,
 purrr::map(sampleList,
            possiblycheckNewAlignments)
 
-
-
-
-
-
+# Translate the CDSs:
+translatingCDS <- function(i) {
+  newlyGeneratedTranscriptSequences <- phylotools::read.fasta(paste("./02_annotationsAndExons/",
+                                                                    i,
+                                                                    "/",
+                                                                    i,
+                                                                    "_cds.fasta",
+                                                                    sep = ""))
+  newlyGeneratedTranscriptSequences$aminoAcids <-  seq_translate(dna(newlyGeneratedTranscriptSequences$seq.text))
+  aminoAcidSequences <- select(newlyGeneratedTranscriptSequences,
+                               seq.name,
+                               aminoAcids)
+  colnames(aminoAcidSequences) <- c("seq.name",
+                                    "seq.text")
+  exportFile <- paste("./02_annotationsAndExons/",
+                      i,
+                      "/", 
+                      i,
+                      "_proteins.fasta",
+                      sep = "")
+  print(paste("Exporting proteins for ",
+              i,
+              sep = ""))
+  phylotools::dat2fasta(aminoAcidSequences, 
+                        outfile = exportFile)
+  
+}
+possiblytranslatingCDS <- possibly(translatingCDS,
+                                   otherwise = "Error")
+furrr::future_map(sampleList,
+                  possiblytranslatingCDS)
