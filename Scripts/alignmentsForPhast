@@ -1,0 +1,66 @@
+#!/bin/bash
+
+# Make an output directory:
+mkdir 12_genomeAlignments
+
+# Move the genome sequences there:
+cp ./CVAR/CVAR_genome_v1.0.fasta ./12_genomeAlignments/CVAR_genome.fasta
+FILES="01_pseudo-it/aligned*"
+for f in $FILES
+do
+  export species=`echo "$f" | awk -F'aligned' '{print ($2)}'`
+  echo $species
+  cp "01_pseudo-it/aligned"$species"/iter-04/fa/iter-04-softmask-final.fa" "./12_genomeAlignments/"$species"_genome.fasta"
+done
+
+cd ./12_genomeAlignments/
+
+genomes="./*.fasta"
+for f in $genomes
+do
+  export species=`echo "$f" | awk -F'_' '{print ($1)}' | awk -F'/' '{print ($2)}'`
+  export prefix=$species"_"
+  echo $prefix
+  sed -i "s/>/>$prefix/" $f
+
+  echo Done with $species
+
+done
+
+# Install progressive cactus
+wget https://github.com/ComparativeGenomicsToolkit/cactus/releases/download/v2.6.7/cactus-bin-legacy-v2.6.7.tar.gz
+tar -xzvf cactus-bin-legacy-v2.6.7.tar.gz
+cd cactus-bin-v2.6.7/
+virtualenv -p python3 venv-cactus-v2.6.7
+printf "export PATH=$(pwd)/bin:\$PATH\nexport PYTHONPATH=$(pwd)/lib:\$PYTHONPATH\n" >> venv-cactus-v2.6.7/bin/activate
+source venv-cactus-v2.6.7/bin/activate
+python3 -m pip install -U setuptools pip
+python3 -m pip install -U .
+python3 -m pip install -U -r ./toil-requirement.txt
+
+# Progressivecactus requires a file that contains:
+#   1. A newick tree of the sequences to be aligned. I created this tree with the R script prepForProgressiveCactus.R
+#   2. A two-column list of the sequences to be aligned and the paths to the files containing those sequences.
+# Here, we will create that file:
+cd ../
+echo "((POW0461_genome.fasta:1,CVAR_genome.fasta:1):0.03797631292,((CSM3685_genome.fasta:0.3299411566,CSM3441_genome.fasta:0.3299411566):0.503427633,(POW0123_genome.fasta:0.6296465864,CSM3677_genome.fasta:0.6296465864):0.2037222032):0.2046075233);" > ./cactusInput.txt
+echo >>./cactusInput.txt
+for f in ./*.fasta; do echo -ne "$(basename $f)\t$f\n"; done >>./cactusInput.txt
+
+cactus ./jobstore ./cactusInput.txt ./alignments.hal --realTimeLogging --consMemory 32Gi
+
+# Covert the cactus output to .maf format
+cactus-hal2maf ./jobstore ./alignments.hal cactusOutput.maf.gz --refGenome CVAR_genome.fasta --chunkSize 1000000 --noAncestors
+gunzip --keep cactusOutput.maf.gz
+
+# Order the .maf
+export PYTHONPATH=/programs/sonLib/
+export PATH=/programs/sonLib/bin:/programs/mafTools/bin:$PATH
+mafRowOrderer --maf cactusOutput.maf --order CVAR_genome.fasta,CSM3685_genome.fasta,CSM3441_genome.fasta,POW0123_genome.fasta,CSM3677_genome.fasta,POW0461_genome.fasta > orderedCactusOutput.maf
+
+# Convert the .gff to genePhred format
+echo \##gff-version 3 > test.gff3
+cat CVAR_OGS_v1.0.gff3 >> test.gff3
+
+export PATH=/programs/kentUtils/bin:$PATH
+gff3ToGenePred test.gff3 CVAR.gp
