@@ -5,8 +5,8 @@
   # $1 should be the path to the reference genome
   # $2 should be the path to the data download folder from Novogene, which contains one folder per sample with each of the paired-end reads.
 
-mkdir pseudo-it
-cd pseudo-it
+mkdir 01_pseudo-it
+cd 01_pseudo-it
 
 # Install pseudo-it with conda:
 if conda env list | grep ".*pseudo-it-env.*"
