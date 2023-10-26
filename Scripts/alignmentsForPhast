@@ -13,18 +13,19 @@ do
   cp "01_pseudo-it/aligned"$species"/iter-04/fa/iter-04-softmask-final.fa" "./12_genomeAlignments/"$species"_genome.fasta"
 done
 
+# Change into the directory for this step:
 cd ./12_genomeAlignments/
 
+# List the genomes, get the species code, and append it to each gene name so that each species has unique gene names:
 genomes="./*.fasta"
+
 for f in $genomes
 do
   export species=`echo "$f" | awk -F'_' '{print ($1)}' | awk -F'/' '{print ($2)}'`
   export prefix=$species"_"
   echo $prefix
   sed -i "s/>/>$prefix/" $f
-
   echo Done with $species
-
 done
 
 # Install progressive cactus
@@ -47,6 +48,7 @@ echo "((POW0461_genome.fasta:1,CVAR_genome.fasta:1):0.03797631292,((CSM3685_geno
 echo >>./cactusInput.txt
 for f in ./*.fasta; do echo -ne "$(basename $f)\t$f\n"; done >>./cactusInput.txt
 
+# Run progressivecactus to generate the aligments in .hal format:
 cactus ./jobstore ./cactusInput.txt ./alignments.hal --realTimeLogging --consMemory 32Gi
 
 # Covert the cactus output to .maf format
@@ -58,9 +60,87 @@ export PYTHONPATH=/programs/sonLib/
 export PATH=/programs/sonLib/bin:/programs/mafTools/bin:$PATH
 mafRowOrderer --maf cactusOutput.maf --order CVAR_genome.fasta,CSM3685_genome.fasta,CSM3441_genome.fasta,POW0123_genome.fasta,CSM3677_genome.fasta,POW0461_genome.fasta > orderedCactusOutput.maf
 
+# Get out the newly aligned reference genome in .fasta format, so that we can lift over the annotations:
+hal2fasta alignments.hal CVAR_genome.fasta --outFaPath newlyAligned_CVAR_genome.fasta
+
+# Lift over the CVAR annotation from the original CVAR genome to that new aligned CVAR genome, with flo:
+# Add ruby to your paths
+export PATH=/programs/ruby/bin:$PATH
+
+# Download flo:
+wget -c https://github.com/yeban/flo/archive/master.tar.gz -O flo.tar.gz
+tar xvf flo.tar.gz
+mv flo-master flo
+
+# Change into the directory for running flo:
+mkdir liftoverAnnotation
+cd liftoverAnnotation
+
+# Install flo's dependencies in ext/ directory in the project dir:
+# My attempt to install their version of genometools fails, so I just specify the path to the BioHPC install in my .yaml file.
+../flo/scripts/install.sh
+
+# create the configuration file:
+cat >flo_opts.yaml <<EOL
+# Location of binaries expected by flo.
+#
+# These will be added to PATH before the pipeline is run. The paths below
+# are created by `scripts/install.sh`.Comment out or edit the paths based
+# on how you installed UCSC-Kent toolkit, GNU Parallel and genometools.
+:add_to_path:
+  - 'ext/kent/bin'
+  - 'ext/parallel-20150722/src'
+  - '/programs/genometools-1.5.9/bin/'
+
+# Location of source and target assemblies.
+#
+# If migrating annotations from assembly A to assembly B, A is the source
+# and B is the target. Source and target assemblies are specified as path
+# to the corresponding FASTA files (must end in .fa).
+:source_fa: '/workdir/mb2337/cephalotesComparativeGenomics/CVAR/CVAR_genome_v1.0.fasta'
+:target_fa: '/workdir/mb2337/cephalotesComparativeGenomics/12_genomeAlignments/newlyAligned_CVAR_genome.fasta'
+
+# Number of processes that will be used to parallelise flo. Ideally, this
+# will be the number of CPU cores you have.
+:processes: '60'
+
+# Parameters to run BLAT with.
+#
+# In addition to the options specified here, -noHead option is set by flo.
+# -noHead simply causes the output BLAT output files to not have a header.
+# It doesn't impact accuracy of results.
+#
+# Empty string is equivalent to:
+#
+#   -t=dna -q=dna -tileSize=11 -stepSize=11 -oneOff=0 -minMatch=2
+#   -minScore=30 -minIdentity=90 -maxGap=2 -maxIntron=75000
+#
+# The default string defined below is a suitable trade-off between running
+# time and sensitivity.
+:blat_opts: '-fastMap -tileSize=12 -minIdentity=95'
+
+# Path to the GFF files containing annotations on the source assembly that
+# will be lifted to the target assembly.
+:lift:
+  - './annotationSolelyCDS.gff3'
+EOL
+
+cat flo_opts.yaml
+
+# Process the annotation file with genometools/gt gff3. I think the main thing this does is sort the features by position and add missing "##sequence-region" lines at the beginning of each block of features that are found on the same scaffold.
+/programs/genometools-1.5.9/bin/gt gff3 -tidy -sort -addids -retainids /workdir/mb2337/cephalotesComparativeGenomics/CVAR/CVAR_OGS_v1.0.gff3 > ./annotationTidied.gff3
+
+# Run flo:
+# This currently fails to produce lifted_cleaned.gff, but it does produce lifted.gff3:
+rake -f ../flo/Rakefile
+
+# Process the resulting annotation, 12_genomeAlignments/liftoverAnnotation/run/annotationSolelyCDS/lifted.gff3, in R to get rid of orphan CDS:
+Rscript removingOrphanCDSAfterFlo.R
+
+# Now generate the genePhred file we need for phastcons:
 # Convert the .gff to genePhred format
 echo \##gff-version 3 > test.gff3
-cat CVAR_OGS_v1.0.gff3 >> test.gff3
+cat ./passingAnnotations.gff >> test.gff3
 
 export PATH=/programs/kentUtils/bin:$PATH
-gff3ToGenePred test.gff3 CVAR.gp
+gff3ToGenePred test.gff3 CVAR.gp -maxParseErrors=-1
