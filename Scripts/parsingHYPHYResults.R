@@ -14,9 +14,17 @@ relaxResults <- relaxResults[sapply(relaxResults, file.size) > 0]
 # Write a function to parse a single result JSON file:
 parsingRelax <- function(i) {
   singleRelaxResult <- RJSONIO::fromJSON(content = i)
+  
+  correctedNames <- gsub(pattern = "_",
+                         replacement = "-",
+                         names(singleRelaxResult[["branch attributes"]][["0"]]))
+  
+  inputGenes <- paste(unique(correctedNames),
+                      collapse = "|")
   singleRelaxResultSimple <- c(singleRelaxResult[["input"]][["file name"]],
                                singleRelaxResult[["test results"]][["relaxation or intensification parameter"]],
-                               singleRelaxResult[["test results"]][["p-value"]])
+                               singleRelaxResult[["test results"]][["p-value"]],
+                               inputGenes)
   singleRelaxResultSimple <- as.data.frame(t(singleRelaxResultSimple))
 }
 
@@ -30,17 +38,18 @@ allRelaxResults <- as.data.frame(do.call(rbind, allRelaxResults))
 # Give the results meaningful column names:
 colnames(allRelaxResults) <- c("inputFile",
                                "kValue",
-                               "pValue")
+                               "pValue",
+                               "HOGmembers")
 
 # Get a column with the orthogroup ID:
 allRelaxResults$orthogroup <- stringr::str_split_i(allRelaxResults$inputFile, 
-                                                   pattern = "/",
-                                                   i = 9)
+                                          pattern = "/",
+                                          i = 9)
 allRelaxResults$orthogroup <- stringr::str_split_i(allRelaxResults$orthogroup,
-                                                   pattern = "_",
-                                                   i = 2) %>%
+                                          pattern = "_",
+                                          i = 2) %>%
   stringr::str_split_i(pattern = "\\.",
-                       i = 1)
+              i = 1)
 
 # Make sure the numeric columns are really numeric:
 allRelaxResults$pValue <- as.numeric(as.character(allRelaxResults$pValue)) 
@@ -50,7 +59,7 @@ allRelaxResults$kValue <- as.numeric(as.character(allRelaxResults$kValue))
 allRelaxResults$pValueFDR <- p.adjust(allRelaxResults$pValue, method='BH') 
 
 # Export the allRelaxResults to a csv:
-write_delim(allRelaxResults,
+readr::write_delim(allRelaxResults,
             file = "./allRelaxResults.csv",
             delim = ",",
             quote = "none")
@@ -65,7 +74,7 @@ significantlyIntensifiedGenes <- filter(allRelaxResults,
                                           kValue > 1)
 
 # Prep annotations for GO enrichment:
-GOannotations <- read_delim("./10_InterProScan/kinfin/kinfin_results/cluster_domain_annotation.GO.txt", 
+GOannotations <- readr::read_delim("./10_InterProScan/kinfin/kinfin_results/cluster_domain_annotation.GO.txt", 
                             delim = "\t")
 # Subset so we just have orthogroup name and GO domain IDs:
 longAnnotations <- dplyr::select(GOannotations, 
@@ -82,6 +91,7 @@ wideListAnnotations <- tapply(longAnnotations$domain_id, longAnnotations$orthogr
 
 # Run GO enrichment for the RELAX results:
 runningGOEnrichmentRELAX <- function(geneSet) {
+  library(topGO)
   significanceInfo <- dplyr::select(allRelaxResults, 
                                     orthogroup, 
                                     pValueFDR, 
@@ -165,7 +175,7 @@ relaxGoResults <- rbind(relaxGoResultsRelaxed,
 relaxGoResults
 
 # Export the results to a csv:
-write_delim(relaxGoResults,
+readr::write_delim(relaxGoResults,
             file = "./allrelaxGoResults.csv",
             delim = ",",
             quote = "none")
@@ -180,10 +190,19 @@ bustedphResults <- bustedphResults[sapply(bustedphResults, file.size) > 0]
 # Write a function to parse a single results JSON file:
 parsingBustedph <- function(i) {
   singleBustedphResult <- RJSONIO::fromJSON(content = i)
+  
+  correctedNames <- gsub(pattern = "_",
+                         replacement = "-",
+                         names(singleBustedphResult[["branch attributes"]][["0"]]))
+  
+  inputGenes <- paste(unique(correctedNames),
+                      collapse = "|")
+  
   singleBustedphResultSimple <- c(singleBustedphResult[["input"]][["file name"]],
                                   singleBustedphResult[["test results"]][["p-value"]],
                                   singleBustedphResult[["test results background"]][["p-value"]],
-                                  singleBustedphResult[["test results shared distributions"]][["p-value"]])
+                                  singleBustedphResult[["test results shared distributions"]][["p-value"]],
+                                  inputGenes)
   singleBustedphResultSimple <- as.data.frame(t(singleBustedphResultSimple))
 }
 
@@ -198,14 +217,15 @@ allBustedphResults <- as.data.frame(do.call(rbind, allBustedphResults))
 colnames(allBustedphResults) <- c("inputFile",
                                   "testPvalue",
                                   "backgroundPvalue",
-                                  "differencePvalue")
+                                  "differencePvalue",
+                                  "HOGmembers")
 
 # Get a column with just the orthogroup ID:
 allBustedphResults$orthogroup <- stringr::str_split_i(allBustedphResults$inputFile, 
-                                                      pattern = "/",
-                                                      i = 7) %>%
+                                             pattern = "/",
+                                             i = 7) %>%
   stringr::str_split_i(pattern = "_", 
-                       i = 1)
+              i = 1)
 
 # Make sure columns are numeric:
 allBustedphResults$testPvalue <- as.numeric(as.character(allBustedphResults$testPvalue)) 
@@ -221,7 +241,7 @@ allBustedphResults$differencePvalueFDR <- p.adjust(allBustedphResults$difference
   as.numeric(as.character()) 
 
 # Export the results to a csv:
-write_delim(allBustedphResults,
+readr::write_delim(allBustedphResults,
             file = "./allBustedPHResults.csv",
             delim = ",",
             quote = "none")
@@ -238,7 +258,7 @@ backgroundPositiveSelection <- filter(allBustedphResults,
                                       differencePvalueFDR <= 0.05)
 
 # Prep annotations for GO enrichment:
-GOannotations <- read_delim("./10_InterProScan/kinfin/kinfin_results/cluster_domain_annotation.GO.txt", 
+GOannotations <- readr::read_delim("./10_InterProScan/kinfin/kinfin_results/cluster_domain_annotation.GO.txt", 
                             delim = "\t")
 # Subset so we just have orthogroup name and GO domain IDs:
 longAnnotations <- dplyr::select(GOannotations, 
@@ -339,7 +359,7 @@ bustedGoResults <- rbind(bustedGoResultsForeground,
                          bustedGoResultsBackground)
 
 # Export the results to a csv:
-write_delim(bustedGoResults,
+readr::write_delim(bustedGoResults,
             file = "./allBustedPHGOResults.csv",
             delim = ",",
             quote = "none")
