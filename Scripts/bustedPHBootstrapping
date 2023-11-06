@@ -1,0 +1,66 @@
+#!/bin/bash
+
+##### Get everything set up:
+# Export required paths:
+export LD_LIBRARY_PATH=/usr/local/gcc-7.3.0/lib64:/usr/local/gcc-7.3.0/lib
+
+# Loop over the numbers 1-20, all bootstraps:
+for i in {1..20};
+do echo $i;
+  ##### Construct the list of inputs:
+  # List all of the trees:
+  export treeDirectory=15_BUSTEDPHPermutations/$i"_run/labelled/*txt"
+  ls -hSr $treeDirectory > bustedPHSequenceFileList.txt
+
+  # Read the list of trees.
+  # If a tree file DOES exist and an output file does NOT exist, add that orthogroup sequence file to the input list, fileListBUSTEDPH.txt
+
+  # Remove any old lists:
+  rm fileListBUSTEDPH.txt
+  while read -r line;
+  do
+    export orthogroupNumber=`echo "$line" | awk -F'/' '{print ($4)}' | awk -F'_' '{print ($1)}'`
+
+    export resultFile="15_BUSTEDPHPermutations/"$i"_run/labelled/"$orthogroupNumber"_bustedPHResults.json"
+    if [ -f "$resultFile" ]; then
+      echo "*************************************************************"
+      echo "$resultFile exists; BUSTED-PH has already been run on this orthogroup."
+      echo "*************************************************************"
+    else
+      echo $line >> fileListBUSTEDPH.txt
+    fi
+  done < bustedPHSequenceFileList.txt
+
+  # Split the input file list into a user-specified number of chunks:
+  export chunkNumber="l/"$1
+  split --number=$chunkNumber --additional-suffix=.txt -d fileListBUSTEDPH.txt "bustedPHFileList"
+  # Remove any chunks that are empty:
+  find . -name 'bustedPHFileList*' -type f -empty -delete
+  # Create a file listing those chunks:
+  ls "bustedPHFileList"* > "bustedPHChunkList.txt"
+
+  # While the list of chunks is not empty,
+  while [ -s "bustedPHChunkList.txt" ]
+  do
+    # Run BUSTED-PH, meaning:
+    # Create a holder for the chunks:
+    export batchSize=$1
+    export currentBatch=0
+    export batchFileNames=()
+
+    # Then, while reading each line in our list of chunked files,
+    while read -r line;
+    do
+      export batchFile=$line
+      batchFileNames+=($batchFile)
+      if [ ${#batchFileNames[@]} -eq $batchSize ]; then
+        for batchFile in ${batchFileNames[@]} ; do
+          echo running on iteration $i
+          ./Scripts/BUSTEDPHsingleBootstrap $batchFile $i &
+        done
+        wait
+        batchFileNames=()
+      fi
+    done < bustedPHChunkList.txt
+  done
+done
