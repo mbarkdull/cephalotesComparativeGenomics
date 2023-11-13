@@ -339,3 +339,19 @@ possiblyGettingAcceleratedRegions <- possibly(gettingAcceleratedRegions,
                                               otherwise = "Error.")
 purrr::map(listOfScaffoldNumbers,
            possiblyGettingAcceleratedRegions)
+
+### Read in accelerated regions to compare foreground vs. background ####
+foregroundAcceleratedRegions <- list.files("./16_phastConsAnalyses/acceleratedElements/",
+                                           pattern = "foreground*",
+                                           full.names = TRUE)
+foregroundAcceleratedRegions <- purrr::map(foregroundAcceleratedRegions,
+                                           ape::read.gff)
+foregroundAcceleratedRegions <- as.data.frame(do.call(rbind, foregroundAcceleratedRegions)) 
+
+backgroundAcceleratedRegions <- list.files("./16_phastConsAnalyses/acceleratedElements/",
+                                           pattern = "background*",
+                                           full.names = TRUE)
+backgroundAcceleratedRegions <- purrr::map(backgroundAcceleratedRegions,
+                                           ape::read.gff)
+backgroundAcceleratedRegions <- as.data.frame(do.call(rbind, backgroundAcceleratedRegions)) 
+
