@@ -342,6 +342,26 @@ gettingAcceleratedRegions <- function(scaffoldNumber) {
                        ".gff",
                        sep = ""))
     }
+    # Get the conserved elements that are significantly accelerated in the foreground:
+    foregroundAcceleratedElements <- splitElements[fdrForeground< 0.05,]
+    if (length(foregroundAcceleratedElements$seqname) == 0) {
+      print("no reference features.")
+    } else {
+      print("exporting reference features.")
+      nrow(foregroundAcceleratedElements)
+      foregroundAcceleratedElements$feature <- paste("not_",
+                                                     groupAcceleratedIn,
+                                                     sep = "")
+      foregroundAcceleratedElements$score <- observedPhyloPForeground$lnlratio[fdrForeground < 0.05]
+      foregroundAcceleratedElements$seqname <- scaffoldName
+      write.feat(foregroundAcceleratedElements, 
+                 paste("./16_phastConsAnalyses/acceleratedElements/",
+                       groupAcceleratedIn,
+                       "ReferenceElements_",
+                       scaffoldName,
+                       ".gff",
+                       sep = ""))
+    }
   }
   findingConservedAcceleratedRegions(foregroundSpecies = dimorphicSpecies, 
                                      backgroundSpecies = monomorphicSpecies, 
@@ -357,8 +377,9 @@ purrr::map(listOfScaffoldNumbers,
            possiblyGettingAcceleratedRegions)
 
 ### Read in accelerated regions to compare foreground vs. background ####
-acceleratedRegions <- list.files("./16_phastConsAnalyses/acceleratedElements/",
-                                 full.names = TRUE)
+acceleratedRegions <- list.files("./16_phastConsAnalyses/acceleratedElements",
+                                 full.names = TRUE,
+                                 pattern = "*AcceleratedElements*")
 acceleratedRegions <- purrr::map(acceleratedRegions,
                                  ape::read.gff)
 acceleratedRegions <- as.data.frame(do.call(rbind, acceleratedRegions)) 
