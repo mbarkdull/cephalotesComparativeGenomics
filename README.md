@@ -273,3 +273,23 @@ BioRxiv (2021): 2021-08. + Castro-Mondragon, Jaime A., et al. “JASPAR
 2022: the 9th release of the open-access database of transcription
 factor binding profiles.” Nucleic acids research 50.D1 (2022):
 D165-D173.
+
+#### Are conserved noncoding elements evolving in association with caste?
+
+While worker polymorphisms might arise via evolution of protein coding
+genes, we also expect that evolution of gene regulation will be
+important in generating this plastic phenotype. To address this topic,
+we can explore the evolution of those regions of the genome that are not
+protein-coding, but that are highly conserved across species (this
+indicates some degree of evolutionary constraint and points to likely
+functionality).
+
+##### 13\. Align genomes and lift over our annotation using progressiveCactus and flo.
+
+As a first step, we must align our genomes and lift over the reference
+genome annotation to the newly aligned reference species genome. This
+can be done with the script `./Scripts/alignmentsForPhast`, which will
+perform whole-genome alignments with ProgressiveCactus and lift over the
+annotation using Flo.
+
+##### 14\. Identify conserved elements with rphast.

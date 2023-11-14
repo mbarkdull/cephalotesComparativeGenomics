@@ -33,7 +33,9 @@ grViz("digraph flowchart {
       tab10 [label = '@@10']
       tab11 [label = '@@11']
       tab12 [label = '@@12']
-      
+      tab13 [label = '@@13']
+      tab14 [label = '@@14']
+
       # edge definitions with the node IDs
       tab1 -> tab2 -> tab3 -> tab5 -> tab7 -> tab8 -> tab11;
       tab3 -> tab4 -> tab6 -> tab8;
@@ -43,6 +45,7 @@ grViz("digraph flowchart {
       tab3 -> tab10-> tab11;
       tab8 -> tab12;
       tab9 -> tab12;
+      tab1 -> tab13 -> tab14;
       }
       [1]: '1. Assemble genomes from raw reads with pseudo-it'
       [2]: '2. Lift over annotations with liftOver and extract transcripts with gffread'
@@ -56,7 +59,8 @@ grViz("digraph flowchart {
       [10]: '10. Assign functions to orthogroups with InterProScan and KinFin'
       [11]: '11. Test HyPhy results for GO enrichment'
       [12]: '12. Test promoters for TFBS enrichment with MEME-SEA'
-      
+      [13]: '13. Align genomes and lift over our annotation using progressiveCactus and flo.'
+      [14]: '14. Examine evolution of conserved noncoding elements with rphast.' 
       ")
 
 ```
@@ -189,3 +193,11 @@ If you use this script, please cite:
   + Quinlan, Aaron R., and Ira M. Hall. "BEDTools: a flexible suite of utilities for comparing genomic features." Bioinformatics 26.6 (2010): 841-842.
   + Bailey, Timothy L., and Charles E. Grant. "SEA: simple enrichment analysis of motifs." BioRxiv (2021): 2021-08.
   + Castro-Mondragon, Jaime A., et al. "JASPAR 2022: the 9th release of the open-access database of transcription factor binding profiles." Nucleic acids research 50.D1 (2022): D165-D173.
+  
+#### Are conserved noncoding elements evolving in association with caste?
+While worker polymorphisms might arise via evolution of protein coding genes, we also expect that evolution of gene regulation will be important in generating this plastic phenotype. To address this topic, we can explore the evolution of those regions of the genome that are not protein-coding, but that are highly conserved across species (this indicates some degree of evolutionary constraint and points to likely functionality).
+
+##### 13. Align genomes and lift over our annotation using progressiveCactus and flo. 
+As a first step, we must align our genomes and lift over the reference genome annotation to the newly aligned reference species genome. This can be done with the script `./Scripts/alignmentsForPhast`, which will perform whole-genome alignments with ProgressiveCactus and lift over the annotation using Flo. 
+
+##### 14. Identify conserved elements with rphast. 
