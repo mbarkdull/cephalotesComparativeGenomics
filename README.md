@@ -265,13 +265,16 @@ enrichment analysis. You can run this with the script
     genes under selection compared to genes not under selection, using
     the JASPAR2022 motif database and MEME-SEA.
 
-If you use this script, please cite: + Quinlan, Aaron R., and Ira M.
-Hall. “BEDTools: a flexible suite of utilities for comparing genomic
-features.” Bioinformatics 26.6 (2010): 841-842. + Bailey, Timothy L.,
-and Charles E. Grant. “SEA: simple enrichment analysis of motifs.”
-BioRxiv (2021): 2021-08. + Castro-Mondragon, Jaime A., et al. “JASPAR
-2022: the 9th release of the open-access database of transcription
-factor binding profiles.” Nucleic acids research 50.D1 (2022):
+If you use this script, please cite:
+
+  - Quinlan, Aaron R., and Ira M. Hall. “BEDTools: a flexible suite of
+    utilities for comparing genomic features.” Bioinformatics 26.6
+    (2010): 841-842.
+  - Bailey, Timothy L., and Charles E. Grant. “SEA: simple enrichment
+    analysis of motifs.” BioRxiv (2021): 2021-08.
+  - Castro-Mondragon, Jaime A., et al. “JASPAR 2022: the 9th release of
+    the open-access database of transcription factor binding profiles.”
+    Nucleic acids research 50.D1 (2022):
 D165-D173.
 
 #### Are conserved noncoding elements evolving in association with caste?
@@ -293,3 +296,20 @@ perform whole-genome alignments with ProgressiveCactus and lift over the
 annotation using Flo.
 
 ##### 14\. Identify conserved elements with rphast.
+
+Next, we can use PhastCons, as implemented in rphast, to explore the
+differential evolution of conserved elements in species with and without
+our phenotype of interest. To run this step, use the script
+`./Scripts/adaptedKillifishCode.R`.
+
+Essentially, this script identifies conserved elements in a subset of
+your species either with or without the phenotype, then identifies the
+subset of those elements that are evolving in an accelerated manner in
+the remainder of your species, relative to the rate of evolution of
+fourfold degenerate sites. These accelerated elements are putatively
+under relaxed selection in that group of remaining species. It then
+repeats the analysis with the species sets flipped.
+
+The concept and code for this step are adapted from [Cui et
+al. 2021](https://onlinelibrary.wiley.com/doi/full/10.1111/mec.15982);
+if you use this script, please also cite them.
