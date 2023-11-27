@@ -7,6 +7,10 @@
 # Line looks like: 15_BUSTEDPHPermutations/1_run/labelled/HOG0001333_tree.txt
 while read -r line;
 do
+  current_date_time=$(date)
+  echo Running iteration $2 on chunk file $1 at $current_date_time
+  echo Running iteration $2 on chunk file $1 at $current_date_time >> bustedBootstrapProgress.txt
+
   orthogroupNumber=`echo "$line" | awk -F'/' '{print ($4)}' | awk -F'_' '{print ($1)}'`
 
   echo The orthogroup number is $orthogroupNumber
