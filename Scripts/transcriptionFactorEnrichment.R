@@ -182,15 +182,6 @@ transcriptionFactorEnrichment <- function(type) {
   promotersUnderSelection <- filter(annotationsUnderSelection, 
                                     type == "promoter")
   
-  # Subset all of the annotations, including promoters, to those corresponding to genes NOT under selection:
-  annotationsNotUnderSelection <- filter(genesWithPromoters, 
-                                         !(ID %in% selectionSubset$CVARgene)) %>%
-    subset(select = -c(ID))
-  
-  promotersNotUnderSelection <- filter(annotationsNotUnderSelection, 
-                                       type == "promoter")
-  length(promotersNotUnderSelection$seqid)
-  
   # Export those data:
   readr::write_delim(promotersUnderSelection,
                      file = paste("./14_SEAenrichment/",
@@ -201,27 +192,13 @@ transcriptionFactorEnrichment <- function(type) {
                      quote = "none",
                      col_names = FALSE,
                      na = ".")
-  readr::write_delim(promotersNotUnderSelection,
-                     file = paste("./14_SEAenrichment/",
-                                  type,
-                                  "promotersNotUnderSelection.gff",
-                                  sep = ""),
-                     delim = "\t",
-                     quote = "none",
-                     col_names = FALSE,
-                     na = ".")
+  
   # Convert the promoter gff files to bed files:
   system(paste("/programs/bin/bedops/convert2bed --input=gff --do-not-sort < ./14_SEAenrichment/",
                type,
                "promotersUnderSelection.gff > ./14_SEAenrichment/",
                type,
                "promotersUnderSelection.bed",
-               sep = ""))
-  system(paste("/programs/bin/bedops/convert2bed --input=gff --do-not-sort < ./14_SEAenrichment/",
-               type,
-               "promotersNotUnderSelection.gff > ./14_SEAenrichment/",
-               type,
-               "promotersNotUnderSelection.bed",
                sep = ""))
   
   # Extract out .fasta sequences for each type of promoter:
@@ -232,19 +209,25 @@ transcriptionFactorEnrichment <- function(type) {
                "promotersUnderSelectionSequences.fasta",
                sep = ""))
   
-  system(paste("/programs/bin/bedtools/bin/bedtools getfasta -s -fi ./CVAR/CVAR_genome_v1.0.fasta -bed ./14_SEAenrichment/",
-               type,
-               "promotersNotUnderSelection.bed -fo ./14_SEAenrichment/",
-               type,
-               "promotersNotUnderSelectionSequences.fasta",
-               sep = ""))
+  # Read these in, hard-mask them, then re-export:
+  underSelection <- phylotools::read.fasta(paste("./14_SEAenrichment/",
+                                                 type,
+                                                 "promotersUnderSelectionSequences.fasta",
+                                                 sep = ""))
+  
+  underSelection$seq.text <- gsub(pattern = "[a-z]",
+                                  replacement = "N",
+                                  underSelection$seq.text)
+  phylotools::dat2fasta(underSelection, 
+                        outfile = paste("./14_SEAenrichment/",
+                                        type,
+                                        "promotersUnderSelectionSequencesHardMasked.fasta",
+                                        sep = ""))
   
   # Run enrichment analysis with MEME-SEA:
   system(paste("/programs/meme-5.5.2/bin/sea --p ./14_SEAenrichment/",
                type,
-               "promotersUnderSelectionSequences.fasta --m JASPAR2022_CORE_insects_non-redundant_pfms_meme.txt --n ./14_SEAenrichment/",
-               type,
-               "promotersNotUnderSelectionSequences.fasta --oc ./14_SEAenrichment/",
+               "promotersUnderSelectionSequencesHardMasked.fasta --m JASPAR2022_CORE_insects_non-redundant_pfms_meme.txt --oc ./14_SEAenrichment/",
                type,
                "/",
                sep = ""))
@@ -259,3 +242,4 @@ options(future.globals.maxSize= +Inf)
 
 furrr::future_map(selectionRegimes,
                   possiblytranscriptionFactorEnrichment)
+
