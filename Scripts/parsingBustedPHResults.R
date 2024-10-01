@@ -3,6 +3,7 @@ library(RJSONIO)
 library(tidyverse)
 library(ggthemes)
 library(gt)
+library(beepr) 
 
 # Get a list of results files, sort by decreasing size, and remove any that are empty:
 #files <- list.files(path = args[1], pattern = "*.json", full.names = TRUE)
@@ -76,6 +77,8 @@ options(future.globals.maxSize= +Inf)
 
 allResults <- furrr::future_map(files,
                                 readingBustedPHResults)
+beep(sound = 5)
+
 allResults <- as.data.frame(do.call(rbind, allResults)) 
 allResults <- allResults %>%  
   mutate(foregroundpValueFDR = p.adjust(`test results p-value`, 
