@@ -7,6 +7,7 @@ export LD_LIBRARY_PATH=/usr/local/gcc-7.3.0/lib64:/usr/local/gcc-7.3.0/lib
 # Loop over the numbers 1-20, all bootstraps:
 for i in {1..20};
 do echo $i;
+  rm bustedPHSequenceFileList.txt
   ##### Construct the list of inputs:
   # List all of the trees:
   export treeDirectory=15_BUSTEDPHPermutations/$i"_run/labelled/*txt"
@@ -32,11 +33,13 @@ do echo $i;
   done < bustedPHSequenceFileList.txt
 
   # Split the input file list into a user-specified number of chunks:
+  find . -name 'bustedPHFileList*' -type f -delete
   export chunkNumber="l/"$1
   split --number=$chunkNumber --additional-suffix=.txt -d fileListBUSTEDPH.txt "bustedPHFileList"
   # Remove any chunks that are empty:
   find . -name 'bustedPHFileList*' -type f -empty -delete
   # Create a file listing those chunks:
+  rm bustedPHChunkList.txt
   ls "bustedPHFileList"* > "bustedPHChunkList.txt"
 
   # Run BUSTED-PH, meaning:
