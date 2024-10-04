@@ -1,6 +1,6 @@
 library(tidyverse)
-library(rphast)
 library(splitstackshape)
+library(rphast)
 
 #### Create output directories ####
 dir.create("./16_phastConsAnalyses/")
@@ -462,6 +462,10 @@ allFeatures <- rbind(acceleratedRegions,
                      referenceRegions,
                      cvarAnnotation)
 
+rm(acceleratedRegions)
+rm(referenceRegions)
+rm(cvarAnnotation)
+
 # Group by scaffold
 allFeatures <- allFeatures %>%
   group_by(seqid) 
@@ -504,35 +508,38 @@ allFeatures <- rbind(allFeatures,
 
 # Test which noncoding elements overlap with intergenes:
 library(valr)
-intergenesToOverlap <- intergenes %>%
-  dplyr::select(seqid,
-         start,
-         end)
-colnames(intergenesToOverlap) <- c("chrom", 
-                                           "start",
-                                           "end")
 
+# Get the necessary info about the intergenic regions:
+intergenes <- intergenes %>%
+  dplyr::select(seqid,
+                start,
+                end)
+colnames(intergenes) <- c("chrom", 
+                          "start",
+                          "end")
+
+# Get the necessary info about the noncoding sequences:
 allNoncodingRegions <- allFeatures %>%
   filter(type == "monomorphicConserved" |
            type == "dimorphicConserved" |
            type == "monomorphicAccelerated" |
            type == "dimorphicAccelerated")
-
 noncodingRegionsToOverlap <- allNoncodingRegions %>%
   dplyr::select(seqid,
          start,
          end)
-
 colnames(noncodingRegionsToOverlap) <- c("chrom", 
                                            "start",
                                            "end")
 
-
-overlapInfo <- valr::bed_intersect(intergenesToOverlap, 
+# Overlap the intergenes and the noncoding sequences:
+overlapInfo <- valr::bed_intersect(intergenes, 
                                    noncodingRegionsToOverlap, 
                                    suffix = c("_intergene", 
                                               "_AR")) %>%
   distinct()
+
+# Add back in relevant info about those overlapping noncoding sequences:
 overlapsWithIntergenic <- right_join(overlapInfo,
                                      allNoncodingRegions,
                                      by = c("start_AR" = "start",
@@ -541,16 +548,22 @@ overlapsWithIntergenic <- right_join(overlapInfo,
   dplyr::select(-c(attributes)) %>%
   distinct()
 
+rm(overlapInfo)
+
+# Calculate some stats about the amount of overlap:
 overlapsWithIntergenic$.overlap <- replace_na(overlapsWithIntergenic$.overlap,
                                               replace = 0)
 overlapsWithIntergenic$lengthNoncoding <- overlapsWithIntergenic$end_AR - overlapsWithIntergenic$start_AR
 overlapsWithIntergenic$percentOverlap <- overlapsWithIntergenic$.overlap / overlapsWithIntergenic$lengthNoncoding
+
+# Add discrete classification as to whether each noncoding sequence overlaps with an intergenic region:
 overlapsWithIntergenic <- overlapsWithIntergenic %>%
   mutate(isIntergenic = case_when(percentOverlap == 0 ~ "no",
                                   .overlap == 0 ~ "no",
                                   percentOverlap > 0 & percentOverlap < 1 ~ "partial",
                                   percentOverlap == 1 ~ "yes"))
 
+# Quick barplot to see the distribution of intergenic vs. intronic noncoding sequences:
 ggplot(data = overlapsWithIntergenic) +
   geom_bar(mapping = aes(x = type,
                          fill = isIntergenic)) 
@@ -559,8 +572,6 @@ ggplot(data = overlapsWithIntergenic) +
 insideGene <- overlapsWithIntergenic %>%
   filter(isIntergenic != "yes" &
            lengthNoncoding > 0)
-
-
 genesToOverlap <- allFeatures %>%
   filter(type == "gene") %>%
   dplyr::select(seqid,
@@ -569,7 +580,6 @@ genesToOverlap <- allFeatures %>%
 colnames(genesToOverlap) <- c("chrom", 
                                    "start",
                                    "end")
-
 insideGeneToOverlap <- insideGene %>%
   dplyr::select(chrom,
          start_AR,
@@ -577,13 +587,11 @@ insideGeneToOverlap <- insideGene %>%
 colnames(insideGeneToOverlap) <- c("chrom", 
                               "start",
                               "end")
-
 overlapWithGenes <- valr::bed_intersect(genesToOverlap, 
                                    insideGeneToOverlap, 
                                    suffix = c("_gene", 
                                               "_noncoding")) %>%
   distinct()
-
 overlapWithGenes <- right_join(overlapWithGenes,
                                filter(allFeatures,
                                       type == "gene"),
@@ -591,8 +599,8 @@ overlapWithGenes <- right_join(overlapWithGenes,
                                             "end_gene" = "end",
                                             "chrom" = "seqid")) %>%
   distinct() 
-
-insideGeneInfo <- right_join(overlapWithGenes,
+rm(allFeatures)
+insideGene <- right_join(overlapWithGenes,
              insideGene,
              by = c("start_noncoding" = "start_AR",
                     "end_noncoding" = "end_AR",
@@ -608,21 +616,14 @@ insideGeneInfo <- right_join(overlapWithGenes,
            "percentOverlap",
            "isIntergenic" )) %>%
   distinct()
-
-insideGeneInfo$geneName <- str_split_i(insideGeneInfo$attributes,
+insideGene$geneName <- str_split_i(insideGene$attributes,
                              pattern = "=",
                              i = 3)
-insideGeneInfo$geneName <- gsub(pattern = ";",
+insideGene$geneName <- gsub(pattern = ";",
                       replacement = "",
-                      insideGeneInfo$geneName)
+                      insideGene$geneName)
 
-
-
-
-
-
-
-# If an element is outside any genes, which genes is it near?
+#### If an element is outside any genes, which genes is it near? ####
 outsideGene <- overlapsWithIntergenic %>%
   filter(isIntergenic == "yes" &
            lengthNoncoding > 0) %>%
@@ -663,6 +664,7 @@ infoAboutGenes <- cbind(as.data.frame(annotation@seqnames),
                         as.data.frame(annotation@elementMetadata),
                         as.data.frame(annotation@ranges))
 infoAboutGenes$geneIndex <- as.numeric(row.names(infoAboutGenes))
+rm(annotation)
 
 # Connect the pieces:
 combinedInfo <-right_join(infoAboutNoncoding,
@@ -677,8 +679,13 @@ combinedInfo <-left_join(combinedInfo,
            end.x,
            Name))
 
+rm(infoAboutNoncoding)
+rm(infoAboutGenes)
+rm(nearestGenes)
+
 genesNearAcceleratedElements <- combinedInfo %>%
   filter(grepl("Accelerated", type.x))
+rm(combinedInfo)
 
 #### Are accelerated elements disproportionately near differentially expressed genes? ####
 # Read in differential expression results:
@@ -712,61 +719,127 @@ acceleratedElementExpression <- acceleratedElementExpression %>%
                                                             "relative to", 
                                                             left)))
 
-# Do some exploratory data visualization:
-# By accelerated element type:
-ggplot(data = filter(acceleratedElementExpression,
-                     !is.na(contrast))) +
-  geom_bar(mapping = aes(x = type.x,
-                         fill = DE),
-           position = "fill") +
-  theme_bw() +
-  theme(axis.text.x = element_text(angle = 20,
-                                   hjust = 1)) +
-  facet_wrap(~upregulated)
-
-# By differential expression pattern:
-ggplot(data = filter(acceleratedElementExpression,
-                     padj <= 0.05)) +
-  geom_bar(mapping = aes(x = upregulated,
-                         fill = type.x),
-           position = "fill") +
-  theme_bw() +
-  theme(axis.text.x = element_text(angle = 20,
-                                   hjust = 1)) +
-  xlab(label = "Differentially expressed genes across contrasts") +
-  ylab(label = "Accelerated noncoding elements") 
-
-# Statistical tests for under/overrepresentation:
+# Run statistical tests for under/overrepresentation and visualize results:
 chiSquaredAcrossContrasts <- function(specificContrast) {
-  chiTestData <- filter(acceleratedElementExpression, 
-                        padj <= 0.05 &
-                          contrast == specificContrast)
-  chiSquareTable <- table(chiTestData$type.x, 
-                          chiTestData$contrast)
+  
+  # Calculate counts in each combination of categorical variables:
+  filteredData <- acceleratedElementExpression %>%
+    filter(contrast == specificContrast) %>%
+    mutate(DE = case_when(padj <= 0.05 & log2FoldChange < 0 ~ left,
+                          padj <= 0.05 & log2FoldChange > 0 ~ right,
+                          TRUE ~ "No")) %>%
+    dplyr::select(c(type.x, 
+                    DE,
+                    left, 
+                    right))
+  
+  # Set the differential expression as a factor, for later plotting:
+  filteredData$DE <- factor(filteredData$DE,
+                            levels = c(unique(filteredData$left),
+                                       unique(filteredData$right),
+                                       "No"))
+  # Select only relevant columns:
+  filteredData <- filteredData %>%
+    dplyr::select(c(type.x, 
+                    DE))
+  colnames(filteredData) <- c("elementType",
+                              "expressionType")
+  
+  # Get the proportion of element types across expression regimes:
+  elementTypeProportions <- filteredData %>%
+    group_by(elementType, 
+             expressionType) %>%
+    summarise(count = n()) %>%
+    mutate(elementTypeCount = sum(count),
+           elementTypeProportion = count/sum(count)) %>%
+    ungroup()
+  
+  # Get the proportion of expression regimes across element types:
+  expressionTypeProportions <- filteredData %>%
+    group_by(expressionType,
+             elementType) %>%
+    summarise(count = n()) %>%
+    mutate(expressionTypeCount = sum(count),
+           expressionTypeProportion = count/sum(count)) %>%
+    ungroup()
+  
+  # Combine the proportion information:
+  allProportions <- full_join(elementTypeProportions,
+                              expressionTypeProportions)
+  
+  # Run a chi-squared test to get residuals:
+  chiSquareTable <- table(filteredData$elementType, 
+                          filteredData$expressionType)
   test <- chisq.test(chiSquareTable)
-  result <- c(test$p.value, test$residuals, specificContrast)
-  return(result)
+  test$stdres
+  
+  # Combine residuals with counts:
+  residuals <- as.data.frame(test$stdres) 
+  plotData <- full_join(allProportions,
+                        residuals,
+                        by = c("elementType" = "Var1",
+                               "expressionType" = "Var2")) 
+  
+  # Scale the proportions for plotting:
+  plotData$expressionTypeProportionTest <- plotData$expressionTypeProportion
+  plotData$elementTypeProportionTest <- plotData$elementTypeProportion
+  
+  # Get the number of bins into which to divide residuals for plotting:
+  maxResidual <- 2 * ceiling(max(plotData$Freq)/2)
+  minResidual <- 2 * floor(min(plotData$Freq)/2)
+  listOfBreaks <- minResidual:maxResidual
+  evens <- function(x) subset(x, x %% 2 == 0)
+  listOfBreaks <- evens(listOfBreaks)
+  
+  # Make the plot:
+  expressionNoncoding <- ggplot(data = plotData,
+                                mapping = aes(x = elementType,
+                                              y = expressionType,
+                                              width = expressionTypeProportionTest,
+                                              height = elementTypeProportionTest,
+                                              fill = Freq)) + 
+    geom_tile(color = "black",
+              linewidth = 0.25) +
+    scale_fill_steps2(low = "#3D348B",
+                      high = "#F35B04",
+                      mid = "white",
+                      midpoint = 0,
+                      breaks = listOfBreaks) + 
+    scale_size_continuous(range = c(4,
+                                    30)) + 
+    scale_x_discrete(expand = expansion(add = c(0.2, 0.8))) +
+    coord_flip() +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 30,
+                                     hjust = 1)) +
+    labs(fill = "Pearson\nstandardized\nresiduals",
+         y = "Differential expression of gene",
+         x = "Type of noncoding element\nassociated with gene",
+         title = "Relationship between gene expression and\nnoncoding element evolution",
+         subtitle = paste("p-value:",
+                          test$p.value))
+  
+  expressionNoncoding
+  #plotly::ggplotly(expressionNoncoding)
+  
+  return(expressionNoncoding)
 }
 
 chiSquaredResults <- purrr::map(unique(na.omit(acceleratedElementExpression$contrast)),
                                 chiSquaredAcrossContrasts)
 
-# Generate a mosaic plot to see which groups are under-represented:
-ggstatsplot::ggbarstats(data = filter(acceleratedElementExpression,
-                         padj <= 0.05),
-           x = type.x,
-           y = contrast) +
-  labs(caption = NULL)
+patchwork::wrap_plots(chiSquaredResults, 
+                      ncol = 2)
 
-vcd::mosaic(~ upregulated + type.x,
-            direction = c("v"),
-            data = filter(acceleratedElementExpression,
-                          padj <= 0.05),
-            shade = TRUE,
-            rot_labels =c (20,
-                           90,
-                           0,
-                           70))
+ggsave(filename = "./Plots/differentialExpressionNoncoding.png",
+       width = 14,
+       height = 8, 
+       units = "in",
+       dpi = 600)
+
+chiSquaredResults[[4]]
+filter(chiSquaredResults[[4]]$data,
+       abs(Freq) > 2)
 
 #### What GO terms are enriched among genes near accelerated elements? ####
 # Read in the annotations from eggnog:
@@ -918,6 +991,8 @@ allRelaxResults <- read_delim(file = "./allRelaxResults.csv",
                    "HOGmembers"))
 hyphyResults <- full_join(allBustedphResults,
                           allRelaxResults)
+rm(allBustedphResults)
+rm(allRelaxResults)
 
 # Split the HOG members column and filter to get a column with CVAR transcript IDs for each result:
 hyphyResults <- splitstackshape::cSplit(hyphyResults, 
@@ -935,12 +1010,11 @@ hyphyResults$HOGmembers <- gsub(pattern = "_R(.*)",
                                 replacement = "",
                                 hyphyResults$HOGmembers)
 
-
+# Combine selection information with the accelerated elements:
 acceleratedElementsSelection <- full_join(genesNearAcceleratedElements,
                                           hyphyResults,
                                           by = c("Name" = "HOGmembers")) %>%
   distinct()
-
 
 acceleratedElementsSelection <- acceleratedElementsSelection %>%
   mutate(positiveSelection = case_when(testPvalueFDR <= 0.05 &
@@ -964,23 +1038,182 @@ acceleratedElementsSelection <- acceleratedElementsSelection %>%
                                        testPvalueFDR >= 0.05 &
                                          backgroundPvalueFDR >= 0.05 ~ "noPositiveSelection",
                                        TRUE ~ "Other")) %>%
-  
-  
   mutate(intensity = case_when(pValueFDR <= 0.05 &
                                  kValue < 1 ~ "Relaxed",
                                pValueFDR <= 0.05 &
                                  kValue > 1 ~ "Intensified",
                                TRUE ~ "No shift"))
 
-ggplot(data = acceleratedElementsSelection) +
-  geom_bar(mapping = aes(x = type.x,
-                         fill = intensity),
-           position = "fill")
+acceleratedElementsSelection$type.x <- replace_na(acceleratedElementsSelection$type.x,
+                                              replace = "noAcceleratedElement")
 
-ggplot(data = filter(acceleratedElementsSelection,
-                     positiveSelection != "Other")) +
-  geom_bar(mapping = aes(x = type.x,
-                         fill = positiveSelection),
-           position = "fill")
+##### Make a mosaic plot with ggplot2
+# Calculate counts in each combination of categorical variables:
+filteredData <- acceleratedElementsSelection %>%
+  filter(!is.na(testPvalue)) %>%
+  dplyr::select(c(type.x, 
+                  positiveSelection))
+colnames(filteredData) <- c("elementType",
+                            "selectionType")
 
+elementTypeProportions <- filteredData %>%
+  group_by(elementType, 
+           selectionType) %>%
+  summarise(count = n()) %>%
+  mutate(elementTypeCount = sum(count),
+         elementTypeProportion = count/sum(count)) %>%
+  ungroup()
+
+selectionTypeProportions <- filteredData %>%
+  group_by(selectionType,
+           elementType) %>%
+  summarise(count = n()) %>%
+  mutate(selectionTypeCount = sum(count),
+         selectionTypeProportion = count/sum(count)) %>%
+  ungroup()
+
+allProportions <- full_join(elementTypeProportions,
+                            selectionTypeProportions)
+
+# Run a chi-squared test to get residuals:
+chiSquareTable <- table(filteredData$elementType, 
+                        filteredData$selectionType)
+test <- chisq.test(chiSquareTable)
+test$stdres
+
+# Combine residuals with counts:
+residuals <- as.data.frame(test$stdres) 
+plotData <- full_join(allProportions,
+                      residuals,
+                      by = c("elementType" = "Var1",
+                             "selectionType" = "Var2")) 
+
+# Scale the proportions for plotting:
+plotData$selectionTypeProportionTest <- plotData$selectionTypeProportion*2
+plotData$elementTypeProportionTest <- plotData$elementTypeProportion*2
+
+# Make the plot:
+selectionNoncoding <- ggplot(data = plotData) + 
+  geom_tile(mapping = aes(x = elementType,
+                          y = selectionType,
+                          width = selectionTypeProportionTest,
+                          height = elementTypeProportionTest,
+                          fill = Freq),
+            color = "black",
+            size = 0.25) +
+  scale_fill_steps2(low = "#3D348B",
+                    high = "#F35B04",
+                    mid = "white",
+                    midpoint = 0) + 
+  scale_size_continuous(range = c(4,
+                                  30)) + 
+  scale_x_discrete(expand = expansion(add = c(0.2, 0.8))) +
+  coord_flip() +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 30,
+                                   hjust = 1)) +
+  labs(fill = "Pearson\nstandardized\nresiduals",
+       y = "Selective regime of gene",
+       x = "Type of noncoding element\nassociated with gene",
+       title = "Relationship between gene evolution and\nnoncoding element evolution")
+
+selectionNoncoding
+
+filter(selectionNoncoding$data,
+       abs(Freq) > 2) %>%
+  arrange(elementType) %>%
+  select(elementType,
+         selectionType, 
+         Freq)
+
+ggsave(filename = "./Plots/positiveSelectionAndNoncoding.png",
+       width = 9,
+       height = 4,
+       units = "in",
+       dpi = 600)
+
+# Do the same thing for selection intensity:
+# Calculate counts in each combination of categorical variables:
+filteredData <- acceleratedElementsSelection %>%
+  filter(!is.na(kValue)) %>%
+  dplyr::select(c(type.x, 
+                  intensity))
+colnames(filteredData) <- c("elementType",
+                            "selectionType")
+
+elementTypeProportions <- filteredData %>%
+  group_by(elementType, 
+           selectionType) %>%
+  summarise(count = n()) %>%
+  mutate(elementTypeCount = sum(count),
+         elementTypeProportion = count/sum(count)) %>%
+  ungroup()
+
+selectionTypeProportions <- filteredData %>%
+  group_by(selectionType,
+           elementType) %>%
+  summarise(count = n()) %>%
+  mutate(selectionTypeCount = sum(count),
+         selectionTypeProportion = count/sum(count)) %>%
+  ungroup()
+
+allProportions <- full_join(elementTypeProportions,
+                            selectionTypeProportions)
+
+# Run a chi-squared test to get residuals:
+chiSquareTable <- table(filteredData$elementType, 
+                        filteredData$selectionType)
+test <- chisq.test(chiSquareTable)
+test$stdres
+
+# Combine residuals with counts:
+residuals <- as.data.frame(test$stdres) 
+plotData <- full_join(allProportions,
+                      residuals,
+                      by = c("elementType" = "Var1",
+                             "selectionType" = "Var2")) 
+
+# Scale the proportions for plotting:
+plotData$selectionTypeProportionTest <- plotData$selectionTypeProportion*2
+plotData$elementTypeProportionTest <- plotData$elementTypeProportion*2
+
+# Make the plot:
+selectionNoncoding <- ggplot(data = plotData) + 
+  geom_tile(mapping = aes(x = elementType,
+                          y = selectionType,
+                          width = selectionTypeProportionTest,
+                          height = elementTypeProportionTest,
+                          fill = Freq),
+            color = "black",
+            size = 0.25) +
+  scale_fill_steps2(low = "#3D348B",
+                    high = "#F35B04",
+                    mid = "white",
+                    midpoint = 0) + 
+  scale_size_continuous(range = c(4,
+                                  30)) + 
+  scale_x_discrete(expand = expansion(add = c(0.2, 0.8))) +
+  coord_flip() +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 30,
+                                   hjust = 1)) +
+  labs(fill = "Pearson\nstandardized\nresiduals",
+       y = "Selective regime of gene",
+       x = "Type of noncoding element\nassociated with gene",
+       title = "Relationship between gene evolution and\nnoncoding element evolution")
+
+selectionNoncoding
+
+filter(selectionNoncoding$data,
+       abs(Freq) > 2) %>%
+  arrange(elementType) %>%
+  select(elementType,
+         selectionType, 
+         Freq)
+
+ggsave(filename = "./Plots/intensitySelectionAndNoncoding.png",
+       width = 9,
+       height = 4,
+       units = "in",
+       dpi = 600)
 
